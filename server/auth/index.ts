@@ -17,7 +17,7 @@ export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   secret: process.env.BETTER_AUTH_SECRET || 'fallback-secret-not-for-production',
   database: drizzleAdapter(db, {
-    provider: 'pg', // PostgreSQL
+    provider: 'pg',
     schema: {
       user: schema.users,
       session: schema.sessions,
@@ -33,6 +33,18 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+  },
+  user: {
+    modelName: 'users',
+  },
+  session: {
+    modelName: 'sessions',
+  },
+  account: {
+    modelName: 'accounts',
+  },
+  verification: {
+    modelName: 'verifications',
   },
   advanced: {
     cookies: {},
