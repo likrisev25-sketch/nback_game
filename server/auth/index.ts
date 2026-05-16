@@ -2,6 +2,11 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { db } from '@/db/db';
 
+// Проверяем наличие секретного ключа
+if (!process.env.BETTER_AUTH_SECRET) {
+  console.error('❌ BETTER_AUTH_SECRET is not set in environment variables');
+}
+
 console.log('🔵 [auth] Starting Better Auth initialization...');
 console.log('🔵 [auth] Secret length:', (process.env.BETTER_AUTH_SECRET || '').length);
 console.log('🔵 [auth] Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
@@ -9,7 +14,7 @@ console.log('🔵 [auth] App URL:', process.env.NEXT_PUBLIC_APP_URL || 'Not set'
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  secret: process.env.BETTER_AUTH_SECRET || 'your-secret-key-change-this-in-production-12345678901234567890',
+  secret: process.env.BETTER_AUTH_SECRET || 'fallback-secret-not-for-production',
   database: drizzleAdapter(db, {
     provider: 'pg', // PostgreSQL
     usePlural: true,
@@ -35,6 +40,7 @@ export const auth = betterAuth({
   },
   advanced: {
     cookies: {},
+    disableCSRFCheck: process.env.NODE_ENV === 'development',
   },
 });
 
