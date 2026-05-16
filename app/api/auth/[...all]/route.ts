@@ -1,30 +1,30 @@
+import { auth } from '@/server/auth';
+import { toNextJsHandler } from 'better-auth/next-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Временная заглушка для аутентификации
+const handler = toNextJsHandler(auth);
+
+// Добавляем логи для отладки
 export async function GET(request: NextRequest) {
-  console.log('⚠️  [auth] GET request - Auth disabled');
-  return NextResponse.json({ 
-    message: 'Authentication temporarily disabled for demo',
-    user: { id: 'demo-user', email: 'demo@example.com', name: 'Demo User' }
-  });
+  console.log('🔵 Auth GET request:', request.nextUrl.pathname);
+  try {
+    const response = await handler.GET(request);
+    console.log('✅ Auth GET response:', response.status);
+    return response;
+  } catch (error) {
+    console.error('❌ Auth GET error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
-  console.log('⚠️  [auth] POST request - Auth disabled');
-  // Возвращаем мок-ответ для регистрации/входа
-  return NextResponse.json({ 
-    user: { 
-      id: 'demo-user-' + Date.now(), 
-      email: 'demo@example.com', 
-      name: 'Demo User',
-      emailVerified: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    session: {
-      id: 'demo-session-' + Date.now(),
-      userId: 'demo-user',
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  });
+  console.log('🔵 Auth POST request:', request.nextUrl.pathname);
+  try {
+    const response = await handler.POST(request);
+    console.log('✅ Auth POST response:', response.status);
+    return response;
+  } catch (error) {
+    console.error('❌ Auth POST error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
