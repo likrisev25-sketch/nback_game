@@ -24,7 +24,7 @@ export const auth = betterAuth({
       account: schema.accounts,
       verification: schema.verifications,
     },
-    usePlural: false,
+    usePlural: true, // Таблицы названы во множественном числе (users, sessions, accounts, verifications)
   }),
   trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'],
   emailAndPassword: {
