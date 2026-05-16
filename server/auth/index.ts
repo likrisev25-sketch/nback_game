@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { db } from '@/db/db';
+import * as schema from '@/db/schema';
 
 // Проверяем наличие секретного ключа
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -17,7 +18,12 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || 'fallback-secret-not-for-production',
   database: drizzleAdapter(db, {
     provider: 'pg', // PostgreSQL
-    usePlural: true,
+    schema: {
+      user: schema.users,
+      session: schema.sessions,
+      account: schema.accounts,
+      verification: schema.verifications,
+    },
   }),
   trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'],
   emailAndPassword: {
@@ -27,16 +33,11 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
-    modelName: 'sessions',
   },
   user: {
-    modelName: 'users',
-  },
-  account: {
-    modelName: 'accounts',
-  },
-  verification: {
-    modelName: 'verifications',
+    additionalFields: {
+      image: true,
+    },
   },
   advanced: {
     cookies: {},
