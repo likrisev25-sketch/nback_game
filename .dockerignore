@@ -1,0 +1,43 @@
+# Node
+node_modules
+npm-debug.log
+npm-debug.*
+yarn-error.log
+.pnp
+.pnp.js
+
+# Next.js
+.next
+out
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+coverage
+.next
+
+# DB (если не нужно в образе)
+db.sqlite
+db.sqlite-journal
+db.sqlite-shm
+db.sqlite-wal
+
+# Misc
+Dockerfile
+docker-compose.yml
+README.md
+*.md
+!Dockerfile

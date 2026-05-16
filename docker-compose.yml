@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - DATABASE_URL=file:/app/db.sqlite
+      - BETTER_AUTH_SECRET=change-this-in-production-$(openssl rand -base64 32 | tr -d '=+/' | head -c 32)
+    volumes:
+      - ./db.sqlite:/app/db.sqlite
+    restart: unless-stopped
