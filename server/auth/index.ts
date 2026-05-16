@@ -1,7 +1,9 @@
 import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from '@better-auth/drizzle-adapter';
+import { kyselyAdapter } from 'better-auth/adapters/kysely';
 import { db } from '@/db/db';
 import * as schema from '@/db/schema';
+import { Kysely, PostgresDialect } from 'kysely';
+import { neon } from '@neondatabase/serverless';
 
 // Проверяем наличие секретного ключа
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -13,17 +15,25 @@ console.log('🔵 [auth] Secret length:', (process.env.BETTER_AUTH_SECRET || '')
 console.log('🔵 [auth] Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
 console.log('🔵 [auth] App URL:', process.env.NEXT_PUBLIC_APP_URL || 'Not set');
 
+// Создаём Kysely подключение
+const sql = new Kysely({
+  dialect: new PostgresDialect({
+    pool: {
+      connectionString: process.env.DATABASE_URL || '',
+    },
+  }),
+});
+
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   secret: process.env.BETTER_AUTH_SECRET || 'fallback-secret-not-for-production',
-  database: drizzleAdapter(db, {
-    provider: 'pg',
+  database: kyselyAdapter(sql, {
     schema: {
       user: schema.users,
       session: schema.sessions,
       account: schema.accounts,
       verification: schema.verifications,
-    } as any,
+    },
   }),
   trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'],
   emailAndPassword: {
