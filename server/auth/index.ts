@@ -24,6 +24,7 @@ export const auth = betterAuth({
       account: schema.accounts,
       verification: schema.verifications,
     },
+    usePlural: false,
   }),
   trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'],
   emailAndPassword: {
@@ -33,11 +34,6 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
-  },
-  user: {
-    additionalFields: {
-      image: true,
-    },
   },
   advanced: {
     cookies: {},
