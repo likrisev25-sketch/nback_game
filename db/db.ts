@@ -1,23 +1,18 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
 
-// Проверяем тип базы данных из DATABASE_URL
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is not set');
+// Проверяем, что DATABASE_URL существует
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL is not set');
+  throw new Error('DATABASE_URL is required');
 }
 
-// Для PostgreSQL используем postgres-js драйвер
-const connectionString = databaseUrl.replace('postgres://', 'postgresql://');
-
-const client = postgres(connectionString, {
-  prepare: false, // Отключаем prepared statements для Serverless
-});
+// Создаём подключение к Neon PostgreSQL
+const sql = neon(process.env.DATABASE_URL);
 
 // Создаём экземпляр drizzle с подключением и схемой
-export const db = drizzle(client, { schema });
+export const db = drizzle(sql, { schema });
 
 // Экспортируем типы для удобной работы
 export type User = typeof schema.users.$inferSelect;

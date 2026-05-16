@@ -82,8 +82,8 @@ export default function Home() {
       } else {
         setActiveGames([]);
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') return;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') return;
       if (isMounted.current) setActiveGames([]);
     } finally {
       if (isMounted.current) setLoadingGames(false);
@@ -145,11 +145,11 @@ export default function Home() {
       setCurrentSessionId(data.playerId ? sessionId : null);
       setCurrentPlayerId(data.playerId);
       setCurrentScreen('lobby');
-    } catch (error: any) {
-      if (error.name === 'AbortError') return;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') return;
       if (isMounted.current) {
-        setGameError(error.message);
-        alert('Ошибка присоединения: ' + error.message);
+        setGameError(error instanceof Error ? error.message : 'Неизвестная ошибка');
+        alert('Ошибка присоединения: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
       }
     } finally {
       if (isMounted.current) joiningRef.current = false;
@@ -205,11 +205,11 @@ export default function Home() {
       setCurrentSessionId(data.sessionId);
       setCurrentPlayerId(data.playerId);
       setCurrentScreen('lobby');
-    } catch (error: any) {
-      if (error.name === 'AbortError') return;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') return;
       if (isMounted.current) {
-        setGameError(error.message);
-        alert('Ошибка создания игры: ' + error.message);
+        setGameError(error instanceof Error ? error.message : 'Неизвестная ошибка');
+        alert('Ошибка создания игры: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
       }
     } finally {
       if (isMounted.current) joiningRef.current = false;

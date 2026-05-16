@@ -77,9 +77,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
         console.log('✅ Register success, reloading...');
         window.location.reload();
         onSuccess?.();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('❌ Register exception:', err);
-        setServerError(err.message || 'Произошла ошибка при регистрации. Попробуйте снова.');
+        setServerError(err instanceof Error ? err.message : 'Произошла ошибка при регистрации. Попробуйте снова.');
       }
     });
   };

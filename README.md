@@ -162,6 +162,8 @@ npm run dev
 
 ## 🧪 Тестирование
 
+### Unit тесты (Jest)
+
 ```bash
 # Запуск всех тестов
 npm test
@@ -173,6 +175,19 @@ npm run test:watch
 npm run test:coverage
 ```
 
+### E2E тесты (Playwright)
+
+```bash
+# Запуск E2E тестов
+npm run test:e2e
+
+# Запуск в UI режиме
+npm run test:e2e:ui
+
+# Запуск в режиме отладки
+npm run test:e2e:debug
+```
+
 ### Покрытие тестами
 
 Все критические функции протестированы:
@@ -181,6 +196,14 @@ npm run test:coverage
 - ✅ Проверка ответов игроков (100% покрытие)
 - ✅ Расчёт скорости на основе ошибок (100% покрытие)
 - ✅ Граничные случаи (100% покрытие)
+- ✅ tRPC роуты (интеграционные тесты)
+- ✅ Сквозные сценарии (Playwright)
+
+#### E2E сценарии
+
+1. **Auth Flow** — регистрация, вход, валидация форм
+2. **Lobby Flow** — создание лобби, добавление ботов, навигация
+3. **tRPC Integration** — создание сессий через API, список игр
 
 ## 🏗 Структура проекта
 
@@ -189,44 +212,54 @@ nback-game/
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API Route Handlers
 │   │   ├── auth/[...all]/        # Better-auth endpoints
+│   │   ├── game/                 # Game API endpoints
+│   │   ├── socket/               # WebSocket server endpoint
 │   │   └── trpc/[trpc]/          # tRPC endpoints
 │   ├── layout.tsx                # Root layout
 │   └── page.tsx                  # Главная страница
 ├── components/                   # React компоненты
 │   ├── auth/                     # Компоненты аутентификации
-│   │   └── AuthForm.tsx
+│   │   ├── LoginForm.tsx
+│   │   ├── RegisterForm.tsx
+│   │   └── AuthModal.tsx
 │   └── game/                     # Игровые компоненты
-│       ├── Grid3x3.tsx
-│       ├── MatchButton.tsx
-│       └── NBackGame.tsx
+│       ├── NBackGame.tsx
+│       └── GameLobby.tsx
 ├── db/                           # База данных
 │   ├── schema/                   # Drizzle схема
 │   │   └── index.ts
-│   └── db.ts                     # Подключение к БД
+│   └── db.ts                     # Подключение к БД (SQLite)
+├── docs/                         # Документация
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   └── ...
+├── e2e/                          # E2E тесты (Playwright)
+│   ├── auth.spec.ts
+│   ├── lobby.spec.ts
+│   └── trpc.spec.ts
 ├── lib/                          # Утилиты
 │   ├── auth-client.ts            # Better-auth клиент
-│   ├── socket-client.ts          # Socket.io менеджер
+│   ├── socket-server.ts          # Socket.io сервер
 │   ├── trpc-client.ts            # tRPC клиент
 │   └── trpc-provider.tsx         # tRPC провайдер
 ├── server/                       # Серверная логика
 │   ├── auth/                     # Better-auth конфигурация
 │   │   └── index.ts
-│   ├── trpc/                     # tRPC сервер
-│   │   ├── routers/
-│   │   │   └── game.ts           # Игровые роуты
-│   │   ├── context.ts
-│   │   └── trpc.ts
-│   └── socket/                   # Socket.io сервер
-│       └── index.ts
-├── __tests__/                    # Тесты
-│   └── lib/
-│       └── nback-game.test.ts
+│   └── trpc/                     # tRPC сервер
+│       ├── routers/
+│       │   └── game.ts           # Игровые роуты
+│       ├── context.ts
+│       └── trpc.ts
+├── __tests__/                    # Unit тесты
+│   └── trpc/
+│       └── game.test.ts          # tRPC роутер тесты
 ├── .env.example                  # Пример окружения
 ├── .env.local                    # Локальное окружение
 ├── drizzle.config.ts             # Drizzle конфигурация
 ├── jest.config.js                # Jest конфигурация
 ├── package.json
-├── server.js                     # Кастомный сервер (Socket.io)
+├── playwright.config.ts          # Playwright конфигурация
+├── README.md
 └── tsconfig.json
 ```
 

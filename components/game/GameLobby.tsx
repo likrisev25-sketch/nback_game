@@ -92,8 +92,8 @@ export const GameLobby: React.FC<GameLobbyProps> = ({ sessionId, playerId, onSta
       }
 
       onStart();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
       setStarting(false);
     }
   };

@@ -500,7 +500,7 @@ async function getLobbyWithPlayers(lobbyId: string): Promise<Lobby | null> {
   } as Lobby;
 }
 
-async function handlePlayerLeave(socket: any, lobbyId: string, userId: string) {
+async function handlePlayerLeave(socket: { id: string }, lobbyId: string, userId: string) {
   const [player] = await db
     .select()
     .from(lobbyPlayers)
@@ -602,7 +602,7 @@ function handlePlayerDisconnect(connectionId: string, lobbyId: string, userId: s
   }
 }
 
-function startCountdown(socket: any, lobbyId: string, hostId: string) {
+function startCountdown(socket: { id: string }, lobbyId: string, hostId: string) {
   let seconds = 5;
 
   // Обновляем статус лобби
@@ -631,7 +631,7 @@ function startCountdown(socket: any, lobbyId: string, hostId: string) {
   }, 1000);
 }
 
-async function startGame(socket: any, lobbyId: string, hostId: string) {
+async function startGame(socket: { id: string }, lobbyId: string, hostId: string) {
   // Обновляем статус лобби
   await db
     .update(lobbies)
@@ -670,7 +670,7 @@ function startInactivePlayerChecker() {
 
       if (lobby) {
         await handlePlayerLeave(
-          { id: player.connectionId } as any,
+          { id: player.connectionId || '' },
           player.lobbyId,
           player.userId
         );

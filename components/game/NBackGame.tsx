@@ -418,7 +418,7 @@ export const NBackGame: React.FC<{
   }, [sessionId]);
 
   // Автозапуск игры когда статус уже playing
-  const autoStartGame = useCallback(async (data: any) => {
+  const autoStartGame = useCallback(async (data: unknown) => {
     if (gameStartedRef.current) return;
     gameStartedRef.current = true;
 

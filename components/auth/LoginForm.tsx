@@ -64,9 +64,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
         console.log('✅ Login success, reloading...');
         window.location.reload();
         onSuccess?.();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('❌ Login exception:', err);
-        setServerError(err.message || 'Произошла ошибка при входе. Попробуйте снова.');
+        setServerError(err instanceof Error ? err.message : 'Произошла ошибка при входе. Попробуйте снова.');
       }
     });
   };

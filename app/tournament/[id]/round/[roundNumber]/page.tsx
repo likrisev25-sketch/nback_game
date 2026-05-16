@@ -86,7 +86,7 @@ export default function TournamentRoundPage() {
       // Подготавливаем результаты всех игроков используя данные с сервера
       const playerResults = data.players.map((p: TournamentPlayer) => {
         // Ищем статистику этого игрока с сервера
-        const serverStats = statsData.players.find((s: any) => s.id === p.id);
+        const serverStats = statsData.players.find((s: { id: string }) => s.id === p.id);
         
         // Для текущего игрока используем переданные correctAnswers/errors
         // Для бота и других используем данные с сервера
@@ -187,7 +187,7 @@ export default function TournamentRoundPage() {
         const isCurrentUser = p.id === playerId;
         
         // Получаем статистику с сервера для этого игрока
-        const serverStats = statsData?.players.find((s: any) => s.id === p.id);
+        const serverStats = statsData?.players.find((s: { id: string }) => s.id === p.id);
         
         let newTotalCorrect, newTotalErrors, newRoundWins;
         
