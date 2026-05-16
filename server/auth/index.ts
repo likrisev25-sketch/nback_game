@@ -8,6 +8,7 @@ console.log('🔵 [auth] Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not
 console.log('🔵 [auth] App URL:', process.env.NEXT_PUBLIC_APP_URL || 'Not set');
 
 export const auth = betterAuth({
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   secret: process.env.BETTER_AUTH_SECRET || 'your-secret-key-change-this-in-production-12345678901234567890',
   database: drizzleAdapter(db, {
     provider: 'pg', // PostgreSQL
