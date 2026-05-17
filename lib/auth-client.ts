@@ -8,7 +8,8 @@ export const authClient = {
   // Регистрация
   signUp: async (email: string, password: string, name: string) => {
     console.log('🔵 [auth-client] signUp called:', email);
-    const response = await fetch(`${API_URL}/api/auth/sign-up`, {
+    // Используем новый endpoint /api/register вместо /api/auth/sign-up
+    const response = await fetch(`${API_URL}/api/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
@@ -29,7 +30,8 @@ export const authClient = {
   // Вход
   signIn: async (email: string, password: string) => {
     console.log('🔵 [auth-client] signIn called:', email);
-    const response = await fetch(`${API_URL}/api/auth/sign-in`, {
+    // Используем новый endpoint /api/login вместо /api/auth/sign-in
+    const response = await fetch(`${API_URL}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -49,7 +51,8 @@ export const authClient = {
   
   // Выход
   signOut: async () => {
-    const response = await fetch(`${API_URL}/api/auth/sign-out`, {
+    console.log('🔵 [auth-client] signOut called');
+    const response = await fetch(`${API_URL}/api/logout`, {
       method: 'POST',
       credentials: 'include',
     });
