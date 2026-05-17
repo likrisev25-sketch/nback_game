@@ -10,25 +10,34 @@ if (!process.env.BETTER_AUTH_SECRET) {
 }
 
 console.log('🔵 [auth] Starting custom auth initialization...');
+console.log('🔵 [auth] DATABASE_URL set:', !!process.env.DATABASE_URL);
 
 // Проверяем наличие подключения к БД
 if (!db) {
   console.error('❌ Database connection is not available. Please set DATABASE_URL');
+} else {
+  console.log('✅ [auth] Database connection initialized');
 }
 
 // Простая кастомная аутентификация
 const auth = {
   // Регистрация
   signUp: async (email: string, password: string, name: string) => {
+    console.log('🔵 [auth] signUp called for:', email);
+    
     if (!db) {
+      console.error('❌ [auth] Database not available in signUp');
       throw new Error('Database connection is not available. Please check DATABASE_URL environment variable.');
     }
     
     try {
+      console.log('🔵 [auth] Checking if user exists...');
       // Проверка, существует ли пользователь
       const existing = await db.query.users.findFirst({
         where: eq(schema.users.email, email),
       });
+      
+      console.log('🔵 [auth] Existing user:', existing);
       
       if (existing) {
         throw new Error('User already exists');
@@ -82,15 +91,21 @@ const auth = {
   
   // Вход
   signIn: async (email: string, password: string) => {
+    console.log('🔵 [auth] signIn called for:', email);
+    
     if (!db) {
+      console.error('❌ [auth] Database not available in signIn');
       throw new Error('Database connection is not available. Please check DATABASE_URL environment variable.');
     }
     
     try {
+      console.log('🔵 [auth] Searching for user...');
       // Поиск пользователя
       const user = await db.query.users.findFirst({
         where: eq(schema.users.email, email),
       });
+      
+      console.log('🔵 [auth] Found user:', user);
       
       if (!user) {
         throw new Error('User not found');
