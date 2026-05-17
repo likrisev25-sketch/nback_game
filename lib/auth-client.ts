@@ -1,15 +1,20 @@
 // Простой клиент аутентификации (без Better Auth)
+// Updated: 2024-05-17 - Removed Better Auth dependency
 
 const API_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+// Добавляем timestamp для проталкивания кэша
+const CACHE_BUSTER = Date.now();
+
 console.log('🔵 [auth-client] API_URL:', API_URL);
+console.log('🔵 [auth-client] CACHE_BUSTER:', CACHE_BUSTER);
 
 export const authClient = {
   // Регистрация
   signUp: async (email: string, password: string, name: string) => {
     console.log('🔵 [auth-client] signUp called:', email);
     // Используем новый endpoint /api/register вместо /api/auth/sign-up
-    const response = await fetch(`${API_URL}/api/register`, {
+    const response = await fetch(`${API_URL}/api/register?t=${CACHE_BUSTER}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
