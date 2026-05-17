@@ -18,7 +18,7 @@ BETTER_AUTH_URL=https://nback-game-topaz.vercel.app
 BETTER_AUTH_SECRET=сгенерируйте_случайную_строку_32_символа
 ```
 
-**Как сгенерировать секрет:**
+**Как сгенерировать секрет:**   70bf6f811a38bb72cb84f0948f82a9dd
 - https://generate-secret.vercel.app/32
 - Или: `openssl rand -base64 32` (Linux/Mac)
 - Или любой случайный набор из 32+ символов

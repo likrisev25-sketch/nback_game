@@ -28,19 +28,12 @@ export const AuthForm: React.FC = () => {
 
     try {
       if (mode === 'signin') {
-        await signIn.email({
-          email,
-          password,
-          callbackURL: '/',
-        });
+        await signIn(email, password);
       } else {
-        await signUp.email({
-          email,
-          password,
-          name,
-          callbackURL: '/',
-        });
+        await signUp(email, password, name);
       }
+      // После успешной входа/регистрации перезагрузим страницу
+      window.location.href = '/';
     } catch (err: unknown) {
       setError((err as Error).message || (err as Error).toString() || 'Произошла ошибка');
     } finally {

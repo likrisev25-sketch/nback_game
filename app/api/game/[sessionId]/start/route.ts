@@ -32,9 +32,27 @@ export async function POST(
       );
     }
 
+    if (gameSession.status === 'completed') {
+      return NextResponse.json(
+        { error: 'Игра завершена' },
+        { status: 400 }
+      );
+    }
+
+    if (gameSession.status === 'playing') {
+      // Игра уже запущена, возвращаем успех (идем дальше)
+      console.log('🔵 Game already playing, returning success');
+      return NextResponse.json({
+        success: true,
+        message: 'Игра уже запущена',
+        sessionId,
+        playerCount: players.length,
+      });
+    }
+
     if (gameSession.status !== 'waiting') {
       return NextResponse.json(
-        { error: 'Игра уже началась или завершена' },
+        { error: 'Неверный статус сессии' },
         { status: 400 }
       );
     }

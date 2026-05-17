@@ -26,6 +26,7 @@ export const NBackGame: React.FC<{
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [speedIncreaseNotification, setSpeedIncreaseNotification] = useState(false);
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const [players, setPlayers] = useState<Array<{
     id: string;
     name: string;
@@ -326,6 +327,14 @@ export const NBackGame: React.FC<{
   const startGame = useCallback(async () => {
     console.log('🎮 [startGame] Нажата кнопка "Начать игру"');
     
+    // Защита от повторного нажатия
+    if (isStartingGame || gameStartedRef.current) {
+      console.log('⛔ Игра уже запускается или запущена');
+      return;
+    }
+    
+    setIsStartingGame(true);
+    
     // Очищаем предыдущее состояние
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -391,6 +400,8 @@ export const NBackGame: React.FC<{
       
       setGameStatus('waiting');
       gameStartedRef.current = false;
+    } finally {
+      setIsStartingGame(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, loadPlayerStats, onError]);
@@ -493,9 +504,10 @@ export const NBackGame: React.FC<{
           </p>
           <button
             onClick={startGame}
-            className="mt-5 h-10 rounded-lg bg-gray-900 dark:bg-white px-6 text-sm font-semibold text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+            disabled={isStartingGame}
+            className="mt-5 h-10 rounded-lg bg-gray-900 dark:bg-white px-6 text-sm font-semibold text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Начать игру
+            {isStartingGame ? 'Запуск...' : 'Начать игру'}
           </button>
         </div>
       </div>

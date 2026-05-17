@@ -57,11 +57,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
 
     startTransition(async () => {
       try {
-        const result = await authClient.signUp.email({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name,
-        });
+        const result = await authClient.signUp(formData.email, formData.password, formData.name);
 
         console.log('🔵 Register result:', JSON.stringify(result, null, 2));
 

@@ -1,5 +1,5 @@
 import { auth } from '@/server/auth';
-import { headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { cache } from 'react';
 import type { NextRequest } from 'next/server';
 
@@ -7,18 +7,27 @@ import type { NextRequest } from 'next/server';
  * Получение сессии в Server Components (React cache для дедупликации)
  */
 export const getSession = cache(async () => {
-  return await auth.api.getSession({
-    headers: await headers(),
-  });
+  const cookieStore = await cookies();
+  const token = cookieStore.get('session')?.value;
+  
+  if (!token) {
+    return null;
+  }
+  
+  return await auth.getSession(token);
 });
 
 /**
  * Получение сессии из API Route запроса
  */
 export async function getSessionFromRequest(request: NextRequest) {
-  return await auth.api.getSession({
-    headers: request.headers,
-  });
+  const token = request.cookies.get('session')?.value;
+  
+  if (!token) {
+    return null;
+  }
+  
+  return await auth.getSession(token);
 }
 
 /**

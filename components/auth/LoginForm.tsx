@@ -45,10 +45,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
 
     startTransition(async () => {
       try {
-        const result = await authClient.signIn.email({
-          email: formData.email,
-          password: formData.password,
-        });
+        const result = await authClient.signIn(formData.email, formData.password);
 
         console.log('🔵 Login result:', JSON.stringify(result, null, 2));
 

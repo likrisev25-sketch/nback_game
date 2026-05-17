@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React from 'react';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 
@@ -14,27 +14,18 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
   className = '',
 }) => {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
-  const handleLogout = () => {
-    startTransition(async () => {
-      await authClient.signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            router.push('/');
-            router.refresh();
-          },
-        },
-      });
-    });
+  const handleLogout = async () => {
+    await authClient.signOut();
+    router.push('/');
+    router.refresh();
   };
 
   if (variant === 'icon') {
     return (
       <button
         onClick={handleLogout}
-        disabled={isPending}
-        className={`p-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 ${className}`}
+        className={`p-2 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors ${className}`}
         title="Выйти"
         aria-label="Выйти"
       >
@@ -53,10 +44,9 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
   return (
     <button
       onClick={handleLogout}
-      disabled={isPending}
-      className={`px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 ${className}`}
+      className={`px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ${className}`}
     >
-      {isPending ? 'Выход...' : 'Выйти'}
+      Выйти
     </button>
   );
 };

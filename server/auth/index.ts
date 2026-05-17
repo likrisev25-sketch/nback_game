@@ -1,6 +1,6 @@
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
-import { schema } from '@/db/schema';
+import * as schema from '@/db/schema';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
 
@@ -11,10 +11,19 @@ if (!process.env.BETTER_AUTH_SECRET) {
 
 console.log('🔵 [auth] Starting custom auth initialization...');
 
+// Проверяем наличие подключения к БД
+if (!db) {
+  console.error('❌ Database connection is not available. Please set DATABASE_URL');
+}
+
 // Простая кастомная аутентификация
 const auth = {
   // Регистрация
   signUp: async (email: string, password: string, name: string) => {
+    if (!db) {
+      throw new Error('Database connection is not available. Please check DATABASE_URL environment variable.');
+    }
+    
     try {
       // Проверка, существует ли пользователь
       const existing = await db.query.users.findFirst({
@@ -41,6 +50,18 @@ const auth = {
         updatedAt: now,
       }).returning();
       
+      // Создание записи в accounts для пароля
+      const accountId = nanoid();
+      await db.insert(schema.accounts).values({
+        id: accountId,
+        accountId: userId,
+        providerId: 'credentials',
+        userId: userId,
+        password: hashedPassword,
+        createdAt: now,
+        updatedAt: now,
+      });
+      
       // Создание сессии
       const sessionId = nanoid();
       const session = await db.insert(schema.sessions).values({
@@ -61,6 +82,10 @@ const auth = {
   
   // Вход
   signIn: async (email: string, password: string) => {
+    if (!db) {
+      throw new Error('Database connection is not available. Please check DATABASE_URL environment variable.');
+    }
+    
     try {
       // Поиск пользователя
       const user = await db.query.users.findFirst({
@@ -71,8 +96,17 @@ const auth = {
         throw new Error('User not found');
       }
       
+      // Поиск пароля в accounts
+      const account = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.userId, user.id),
+      });
+      
+      if (!account || !account.password) {
+        throw new Error('Password not set for this user');
+      }
+      
       // Проверка пароля
-      const isValid = await bcrypt.compare(password, (user as any).password || '');
+      const isValid = await bcrypt.compare(password, account.password);
       
       if (!isValid) {
         throw new Error('Invalid password');
