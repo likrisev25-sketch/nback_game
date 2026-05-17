@@ -1,4 +1,3 @@
-import { auth } from '@/server/auth';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -14,8 +13,8 @@ export default function middleware(request: NextRequest) {
   // Только /profile требует авторизации
   const isProtectedRoute = nextUrl.pathname.startsWith('/profile');
 
-  // Проверяем сессию по куке Better Auth
-  const sessionCookie = request.cookies.get('better-auth.session_token');
+  // Проверяем сессию по куке кастомного auth
+  const sessionCookie = request.cookies.get('session');
   const isLoggedIn = !!sessionCookie;
   
   if (isProtectedRoute && !isLoggedIn) {
