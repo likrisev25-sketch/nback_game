@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Build
+.next
+out
+
+# Development
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation and misc
+*.md
+!README.md
+Dockerfile
+docker-compose.yml
+*.ps1
+*.sh
+
+# Tests
+__tests__
+e2e
+playwright.config.ts
+jest.config.js
+jest.setup.js
+
+# Database files (local only)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+db.sqlite*
+
+# Scripts
+scripts/
+
+# Other
+.git
+.gitignore
+.vercel-cache-update
