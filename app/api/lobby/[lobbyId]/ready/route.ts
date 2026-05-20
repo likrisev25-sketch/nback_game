@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .from(lobbyPlayers)
       .where(eq(lobbyPlayers.lobbyId, lobbyId));
 
-    const allReady = allPlayers.every((p) => p.isReady);
+    const allReady = allPlayers.every((p: typeof lobbyPlayers.$inferSelect) => p.isReady);
 
     if (allReady && lobby.status === 'waiting') {
       // Все готовы - возвращаем сигнал для запуска countdown
