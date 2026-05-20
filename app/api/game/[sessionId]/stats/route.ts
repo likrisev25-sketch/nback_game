@@ -30,12 +30,11 @@ export async function GET(
       orderBy: [desc(gamePlayers.correctAnswers)],
     });
 
-    console.log('📊 [stats] Игроки:', players.map(p => ({
+    console.log('📊 [stats] Игроки:', players.map((p: typeof gamePlayers.$inferSelect) => ({
       id: p.id,
       name: p.name,
       correctAnswers: p.correctAnswers,
       errors: p.errors,
-      isBot: p.isBot,
     })));
 
     return NextResponse.json({
