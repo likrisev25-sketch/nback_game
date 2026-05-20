@@ -17,7 +17,8 @@ export function LandingAuth({ onAuthSuccess }: LandingAuthProps) {
   const [mode, setMode] = useState<'login' | 'register'>('register');
 
   const handleSuccess = () => {
-    onAuthSuccess?.();
+    console.log('🔵 [LandingAuth] Auth success callback called');
+    // Не вызываем onAuthSuccess здесь - страница page.tsx сама проверит сессию
   };
 
   return (

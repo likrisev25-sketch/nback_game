@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { authClient } from '@/lib/auth-client';
 
@@ -17,6 +18,7 @@ interface LoginFormProps {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) => {
+  const router = useRouter();
   const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -45,12 +47,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
 
     startTransition(async () => {
       try {
+        console.log('🔵 [LoginForm] Attempting login...');
         const result = await authClient.signIn(formData.email, formData.password);
 
-        console.log('🔵 Login result:', JSON.stringify(result, null, 2));
+        console.log('🔵 [LoginForm] Login result:', result);
 
         if (result.error) {
-          console.error('❌ Login error:', JSON.stringify(result.error, null, 2));
+          console.error('❌ [LoginForm] Login error:', result.error);
           const errorMsg = typeof result.error.message === 'string' 
             ? result.error.message 
             : 'Неверный email или пароль';
@@ -58,11 +61,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           return;
         }
 
-        console.log('✅ Login success, reloading...');
-        window.location.reload();
+        console.log('✅ [LoginForm] Login successful, refreshing page...');
+        // Явно обновляем данные и редиректим
+        router.refresh();
         onSuccess?.();
       } catch (err: unknown) {
-        console.error('❌ Login exception:', err);
+        console.error('❌ [LoginForm] Login exception:', err);
         setServerError(err instanceof Error ? err.message : 'Произошла ошибка при входе. Попробуйте снова.');
       }
     });

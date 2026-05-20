@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { authClient } from '@/lib/auth-client';
 
@@ -24,6 +25,7 @@ interface RegisterFormProps {
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin }) => {
+  const router = useRouter();
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
@@ -57,12 +59,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
 
     startTransition(async () => {
       try {
+        console.log('🔵 [RegisterForm] Attempting registration...');
         const result = await authClient.signUp(formData.email, formData.password, formData.name);
 
-        console.log('🔵 Register result:', JSON.stringify(result, null, 2));
+        console.log('🔵 [RegisterForm] Registration result:', result);
 
         if (result.error) {
-          console.error('❌ Register error:', JSON.stringify(result.error, null, 2));
+          console.error('❌ [RegisterForm] Registration error:', result.error);
           const errorMsg = typeof result.error.message === 'string' 
             ? result.error.message 
             : 'Ошибка при регистрации';
@@ -70,11 +73,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           return;
         }
 
-        console.log('✅ Register success, reloading...');
-        window.location.reload();
+        console.log('✅ [RegisterForm] Registration successful, refreshing page...');
+        router.refresh();
         onSuccess?.();
       } catch (err: unknown) {
-        console.error('❌ Register exception:', err);
+        console.error('❌ [RegisterForm] Registration exception:', err);
         setServerError(err instanceof Error ? err.message : 'Произошла ошибка при регистрации. Попробуйте снова.');
       }
     });

@@ -1,5 +1,4 @@
 import { db } from '@/db/db';
-import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
@@ -34,7 +33,7 @@ const auth = {
       console.log('🔵 [auth] Checking if user exists...');
       // Проверка, существует ли пользователь
       const existing = await db.query.users.findFirst({
-        where: eq(schema.users.email, email),
+        where: (users, { eq }) => eq(users.email, email),
       });
       
       console.log('🔵 [auth] Existing user:', existing);
@@ -102,7 +101,7 @@ const auth = {
       console.log('🔵 [auth] Searching for user...');
       // Поиск пользователя
       const user = await db.query.users.findFirst({
-        where: eq(schema.users.email, email),
+        where: (users, { eq }) => eq(users.email, email),
       });
       
       console.log('🔵 [auth] Found user:', user);
@@ -113,7 +112,7 @@ const auth = {
       
       // Поиск пароля в accounts
       const account = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.userId, user.id),
+        where: (accounts, { eq }) => eq(accounts.userId, user.id),
       });
       
       if (!account || !account.password) {
@@ -149,19 +148,26 @@ const auth = {
   
   // Выход
   signOut: async (sessionId: string) => {
-    await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));
+    await db.delete(schema.sessions).where((sessions, { eq }) => eq(sessions.id, sessionId));
   },
   
   // Получение сессии
   getSession: async (token: string) => {
+    // Поиск сессии без with
     const session = await db.query.sessions.findFirst({
-      where: eq(schema.sessions.token, token),
-      with: {
-        user: true,
-      },
+      where: (sessions, { eq }) => eq(sessions.token, token),
     });
     
-    return session;
+    if (!session) return null;
+    
+    // Отдельный запрос для пользователя
+    const user = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, session.userId),
+    });
+    
+    if (!user) return null;
+    
+    return { ...session, user };
   },
 };
 

@@ -14,11 +14,12 @@ import { LandingAuth } from '@/components/auth/LandingAuth';
  */
 export default function Home() {
   const router = useRouter();
-  const { data: session, isPending: sessionLoading } = useSession();
+  const { data: session, isPending: sessionLoading, mutate: refetchSession } = useSession();
 
   const isMounted = useRef(true);
   const joiningRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const sessionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [currentScreen, setCurrentScreen] = useState<'menu' | 'lobby' | 'game'>('menu');
@@ -56,12 +57,23 @@ export default function Home() {
   // Очистка при размонтировании
   useEffect(() => {
     isMounted.current = true;
+    
+    // Polling для проверки сессии каждые 2 секунды (если сессия ещё не загружена)
+    if (!sessionLoading && !session?.user) {
+      sessionIntervalRef.current = setInterval(async () => {
+        if (!isMounted.current) return;
+        console.log('🔵 [session polling] Checking session...');
+        await refetchSession();
+      }, 2000);
+    }
+    
     return () => {
       isMounted.current = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (sessionIntervalRef.current) clearInterval(sessionIntervalRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
     };
-  }, []);
+  }, [sessionLoading, session?.user, refetchSession]);
 
   // Загрузка списка активных игр
   const loadActiveGames = useCallback(async () => {

@@ -5,12 +5,6 @@ import { cookies } from 'next/headers';
 export async function POST(request: NextRequest) {
   console.log('🔵 [LOGIN] POST request received');
   
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-  
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -20,18 +14,19 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
-        { status: 400, headers: corsHeaders }
+        { status: 400 }
       );
     }
     
     const result = await auth.signIn(email, password);
     
     console.log('✅ [LOGIN] Login successful');
+    console.log('🔵 [LOGIN] Setting session cookie for user:', result.user.name);
     
     const response = NextResponse.json({ 
       user: result.user,
       session: result.session 
-    }, { headers: corsHeaders });
+    });
     
     response.cookies.set('session', result.session.token, {
       httpOnly: true,
@@ -41,12 +36,13 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
     
+    console.log('🔵 [LOGIN] Cookie set successfully');
     return response;
   } catch (error: any) {
     console.error('❌ [LOGIN] Error:', error);
     return NextResponse.json(
       { error: error.message || 'Login failed' },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 }

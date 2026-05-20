@@ -16,9 +16,11 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
   const router = useRouter();
 
   const handleLogout = async () => {
+    console.log('🔵 [LogoutButton] Logging out...');
     await authClient.signOut();
-    router.push('/');
+    console.log('🔵 [LogoutButton] Sign out complete, refreshing...');
     router.refresh();
+    window.location.href = '/';
   };
 
   if (variant === 'icon') {
