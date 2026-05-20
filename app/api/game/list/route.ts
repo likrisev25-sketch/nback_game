@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     console.log('📋 [list/route] Запрос к БД...');
     const sessions = await db.query.gameSessions.findMany({
       where: eq(gameSessions.status, 'waiting'),
-      orderBy: (sessions, { desc }) => [desc(sessions.createdAt)],
+      orderBy: (sessions: typeof gameSessions, { desc }: any) => [desc(sessions.createdAt)],
     });
 
     console.log('📋 [list/route] Найдено сессий:', sessions.length);
