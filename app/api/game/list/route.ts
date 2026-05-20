@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     console.log('📋 [list/route] Найдено сессий:', sessions.length);
 
     // Преобразуем данные в удобной форме
-    const games = await Promise.all(sessions.map(async (session) => {
+    const games = await Promise.all(sessions.map(async (session: typeof gameSessions.$inferSelect) => {
       // Получаем игроков для каждой сессии отдельно
       const players = await db.query.gamePlayers.findMany({
         where: eq(gamePlayers.sessionId, session.id),
