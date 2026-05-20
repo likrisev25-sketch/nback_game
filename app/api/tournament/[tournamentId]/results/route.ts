@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { tournamentResults, gamePlayers, gameMoves } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { tournamentResults } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 interface SaveTournamentResultRequest {
@@ -15,6 +15,8 @@ interface SaveTournamentResultRequest {
     botAccuracy?: number;
   }>;
 }
+
+type TournamentResultSelect = typeof tournamentResults.$inferSelect;
 
 // Валидация UUID
 function isValidUUID(id: string): boolean {
@@ -39,16 +41,17 @@ export async function GET(
     }
 
     // Получаем все результаты турнира
-    const results = await db.query.tournamentResults.findMany({
-      where: eq(tournamentResults.tournamentId, tournamentIdStr),
-      orderBy: (results: typeof tournamentResults, { desc }: any) => [desc(results.totalCorrect)],
-    });
+    const results: TournamentResultSelect[] = await db
+      .select()
+      .from(tournamentResults)
+      .where(eq(tournamentResults.tournamentId, tournamentIdStr))
+      .orderBy(desc(tournamentResults.totalCorrect));
 
     return NextResponse.json({
       success: true,
       tournamentId: tournamentIdStr,
-      results: results.map((r: typeof tournamentResults.$inferSelect, index: number) => ({
-        ...r,
+      results: results.map((result: TournamentResultSelect, index: number) => ({
+        ...result,
         rank: index + 1,
       })),
     });
@@ -128,10 +131,11 @@ export async function POST(
     }
 
     // Получаем обновленные результаты с ранжированием
-    const updatedResults = await db.query.tournamentResults.findMany({
-      where: eq(tournamentResults.tournamentId, tournamentIdStr),
-      orderBy: (results, { desc }) => [desc(results.totalCorrect)],
-    });
+    const updatedResults: TournamentResultSelect[] = await db
+      .select()
+      .from(tournamentResults)
+      .where(eq(tournamentResults.tournamentId, tournamentIdStr))
+      .orderBy(desc(tournamentResults.totalCorrect));
 
     // Обновляем rank для всех участников
     for (let i = 0; i < updatedResults.length; i++) {
@@ -151,8 +155,8 @@ export async function POST(
       success: true,
       tournamentId: tournamentIdStr,
       roundNumber,
-      results: updatedResults.map((r: typeof tournamentResults.$inferSelect, index: number) => ({
-        ...r,
+      results: updatedResults.map((result: TournamentResultSelect, index: number) => ({
+        ...result,
         rank: index + 1,
       })),
     });
