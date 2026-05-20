@@ -192,7 +192,7 @@ export async function POST(
     // Проверяем, не отправлял ли игрок уже ответ на этот шаг (после проверки ответа)
     console.log('🔍 Проверяем дубликаты ответа...');
     const existingMove = await db.query.gameMoves.findFirst({
-      where: (moves, { and, eq }) => and(
+      where: (moves: typeof gameMoves, { and, eq }: any) => and(
         eq(moves.sessionId, sessionIdStr),
         eq(moves.playerId, playerIdStr),
         eq(moves.stepNumber, stepNumber)
@@ -237,7 +237,7 @@ export async function POST(
     if (!moveInserted) {
       // Ход уже существовал - возвращаем существующий результат без обновления статистики
       const fallbackMove = await db.query.gameMoves.findFirst({
-        where: (moves, { and, eq }) => and(
+        where: (moves: typeof gameMoves, { and, eq }: any) => and(
           eq(moves.sessionId, sessionIdStr),
           eq(moves.playerId, playerIdStr),
           eq(moves.stepNumber, stepNumber)
