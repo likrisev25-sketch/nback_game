@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLobby } from '@/contexts/LobbyContext';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
-import { Lobby } from '@/types/lobby';
+import { Lobby, LobbyPlayer } from '@/types/lobby';
 
 interface LobbyRoomProps {
   lobbyId: string;
