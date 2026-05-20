@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     // Получаем игроков для каждого лобби
     const lobbiesWithPlayers = await Promise.all(
-      allLobbies.map(async (lobby) => {
+      allLobbies.map(async (lobby: typeof lobbies.$inferSelect) => {
         const players = await db
           .select()
           .from(lobbyPlayers)
