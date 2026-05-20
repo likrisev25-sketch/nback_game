@@ -47,7 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .from(lobbyPlayers)
       .where(eq(lobbyPlayers.lobbyId, lobbyId));
 
-    const allReady = allPlayers.every((p) => p.isReady);
+    const allReady = allPlayers.every((p: typeof lobbyPlayers.$inferSelect) => p.isReady);
     if (!allReady) {
       return NextResponse.json({ error: 'Not all players are ready' }, { status: 400 });
     }
