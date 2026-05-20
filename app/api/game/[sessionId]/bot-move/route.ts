@@ -65,7 +65,7 @@ export async function POST(
 
     // Находим бота
     const bot = await db.query.gamePlayers.findFirst({
-      where: (players, { and, eq }) => and(
+      where: (players: typeof gamePlayers, { and, eq }: any) => and(
         eq(players.sessionId, sessionIdStr),
         eq(players.isBot, true)
       ),
