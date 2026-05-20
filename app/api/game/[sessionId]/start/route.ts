@@ -42,6 +42,9 @@ export async function POST(
     if (gameSession.status === 'playing') {
       // Игра уже запущена, возвращаем успех (идем дальше)
       console.log('🔵 Game already playing, returning success');
+      const players = await db.query.gamePlayers.findMany({
+        where: eq(gamePlayers.sessionId, sessionId),
+      });
       return NextResponse.json({
         success: true,
         message: 'Игра уже запущена',
