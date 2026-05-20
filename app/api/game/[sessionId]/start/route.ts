@@ -78,7 +78,7 @@ export async function POST(
     // Проверяем что запрашивающий является хостом (если авторизован)
     // Для неавторизованных игроков разрешаем старт без проверки хоста
     if (userId) {
-      const hostPlayer = players.find(p => p.isHost);
+      const hostPlayer = players.find((p: typeof gamePlayers.$inferSelect) => p.isHost);
       if (hostPlayer && hostPlayer.userId !== userId) {
         return NextResponse.json(
           { error: 'Только создатель игры может начать игру' },
