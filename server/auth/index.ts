@@ -33,7 +33,7 @@ const auth = {
       console.log('🔵 [auth] Checking if user exists...');
       // Проверка, существует ли пользователь
       const existing = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.email, email),
+        where: (users: typeof schema.users, { eq }: any) => eq(users.email, email),
       });
       
       console.log('🔵 [auth] Existing user:', existing);
@@ -101,7 +101,7 @@ const auth = {
       console.log('🔵 [auth] Searching for user...');
       // Поиск пользователя
       const user = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.email, email),
+        where: (users: typeof schema.users, { eq }: any) => eq(users.email, email),
       });
       
       console.log('🔵 [auth] Found user:', user);
@@ -112,7 +112,7 @@ const auth = {
       
       // Поиск пароля в accounts
       const account = await db.query.accounts.findFirst({
-        where: (accounts, { eq }) => eq(accounts.userId, user.id),
+        where: (accounts: typeof schema.accounts, { eq }: any) => eq(accounts.userId, user.id),
       });
       
       if (!account || !account.password) {
@@ -148,21 +148,21 @@ const auth = {
   
   // Выход
   signOut: async (sessionId: string) => {
-    await db.delete(schema.sessions).where((sessions, { eq }) => eq(sessions.id, sessionId));
+    await db.delete(schema.sessions).where((sessions: typeof schema.sessions, { eq }: any) => eq(sessions.id, sessionId));
   },
   
   // Получение сессии
   getSession: async (token: string) => {
     // Поиск сессии без with
     const session = await db.query.sessions.findFirst({
-      where: (sessions, { eq }) => eq(sessions.token, token),
+      where: (sessions: typeof schema.sessions, { eq }: any) => eq(sessions.token, token),
     });
     
     if (!session) return null;
     
     // Отдельный запрос для пользователя
     const user = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, session.userId),
+      where: (users: typeof schema.users, { eq }: any) => eq(users.id, session.userId),
     });
     
     if (!user) return null;
