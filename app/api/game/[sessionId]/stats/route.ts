@@ -46,7 +46,7 @@ export async function GET(
         maxPlayers: session.maxPlayers,
         status: session.status,
       },
-      players: players.map(p => ({
+      players: players.map((p: typeof gamePlayers.$inferSelect) => ({
         id: p.id,
         name: p.name,
         correctAnswers: p.correctAnswers,

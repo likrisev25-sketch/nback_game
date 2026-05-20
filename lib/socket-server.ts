@@ -134,7 +134,7 @@ export function initSocket(server: HTTPServer): Server {
           // Уведомляем других игроков
           socket.to(`lobby:${lobbyId}`).emit('lobby:player-joined', {
             lobbyId,
-            player: updatedLobby.players.find(p => p.userId === userId),
+            player: updatedLobby.players.find((p: LobbyPlayer) => p.userId === userId),
           });
 
           // Проверяем автозапуск когда все места заняты
@@ -142,7 +142,7 @@ export function initSocket(server: HTTPServer): Server {
               updatedLobby.currentPlayers >= updatedLobby.maxPlayers && 
               updatedLobby.status === 'waiting') {
             // Все места заняты и автозапуск включен - запускаем игру
-            const hostPlayer = updatedLobby.players.find(p => p.userId === updatedLobby.hostId);
+            const hostPlayer = updatedLobby.players.find((p: LobbyPlayer) => p.userId === updatedLobby.hostId);
             if (hostPlayer) {
               startCountdown(socket, lobbyId, updatedLobby.hostId);
             }
@@ -190,7 +190,7 @@ export function initSocket(server: HTTPServer): Server {
           });
 
           // Проверяем готовы ли все игроки
-          const allReady = updatedLobby.players.every(p => p.isReady);
+          const allReady = updatedLobby.players.every((p: LobbyPlayer) => p.isReady);
           if (allReady && updatedLobby.status === 'waiting' && updatedLobby.currentPlayers >= updatedLobby.minPlayers) {
             // Все готовы и достаточно игроков - запускаем обратный отсчет
             startCountdown(socket, lobbyId, updatedLobby.hostId);

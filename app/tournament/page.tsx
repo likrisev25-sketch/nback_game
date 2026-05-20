@@ -287,8 +287,8 @@ export default function TournamentPage() {
           </h3>
           <div className="space-y-3">
             {players
-              .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers || b.roundWins - a.roundWins)
-              .map((player, index) => (
+              .sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers || b.roundWins - b.roundWins)
+              .map((player: any, index: number) => (
                 <div
                   key={player.id}
                   className={`flex justify-between items-center p-4 rounded-xl transition-all ${

@@ -308,7 +308,7 @@ export default function TournamentRoundPage() {
 
   // Показываем результаты раунда
   if (showRoundResults) {
-    const currentPlayer = players.find(p => p.id === playerId);
+    const currentPlayer = players.find((p: any) => p.id === playerId);
     
     console.log('📊 [Results] Показываем результаты:', {
       currentPlayer,
@@ -350,7 +350,7 @@ export default function TournamentRoundPage() {
                 </div>
 
                 {/* Показываем бота с общим счёт */}
-                {players.filter(p => p.isBot).map((player) => (
+                {players.filter((p: any) => p.isBot).map((player: any) => (
                   <div
                     key={player.id}
                     className="flex justify-between items-center rounded-md px-4 py-3 text-sm bg-gray-50"

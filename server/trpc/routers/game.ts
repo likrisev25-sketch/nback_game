@@ -371,7 +371,7 @@ export const gameRouter = router({
           currentSpeedMs: session.currentSpeedMs,
           status: session.status,
         },
-        players: players.map(p => ({
+        players: players.map((p: typeof gamePlayers.$inferSelect) => ({
           id: p.id,
           correctAnswers: p.correctAnswers,
           errors: p.errors,
@@ -399,7 +399,7 @@ export const gameRouter = router({
 
       const players = await db.query.gamePlayers.findMany({
         where: eq(gamePlayers.sessionId, input.sessionId),
-        orderBy: (players, { desc }) => [desc(players.correctAnswers)],
+        orderBy: (players: typeof gamePlayers, { desc }: any) => [desc(players.correctAnswers)],
       });
 
       const winner = players[0];
@@ -420,7 +420,7 @@ export const gameRouter = router({
           errors: winner.errors,
           isBot: winner.isBot,
         } : null,
-        players: players.map(p => ({
+        players: players.map((p: typeof gamePlayers.$inferSelect) => ({
           id: p.id,
           correctAnswers: p.correctAnswers,
           errors: p.errors,

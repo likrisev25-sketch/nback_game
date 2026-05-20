@@ -219,7 +219,7 @@ export const LobbyList: React.FC = () => {
                     <span>⚡ {lobby.baseSpeedMs}ms</span>
                   </div>
                   <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                    Игроки: {lobby.players.map(p => 
+                    Игроки: {lobby.players.map((p: any) => 
                       p.isHost ? `${p.name} (Хост)` : p.name
                     ).join(', ')}
                   </div>

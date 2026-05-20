@@ -40,7 +40,7 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     if (!currentLobby || currentLobby.status !== 'waiting' || !autoStartEnabled) return;
     
     const hasMinPlayers = currentLobby.currentPlayers >= currentLobby.minPlayers;
-    const allReady = currentLobby.players.every(p => p.isReady);
+    const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
     
     if (hasMinPlayers && allReady) {
       // Достаточное количество игроков и все готовы - запускаем игру
@@ -52,7 +52,7 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     if (!currentLobby) return;
     
     // Получаем текущий статус (предполагаем что пользователь уже в лобби)
-    const player = currentLobby.players.find(p => p.userId === session?.user?.id);
+    const player = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
     if (!player) return;
 
     setReady(currentLobby.id, !player.isReady);
@@ -126,9 +126,9 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     p => p.userId === session?.user?.id && p.isHost
   );
   
-  const myPlayer = currentLobby.players.find(p => p.userId === session?.user?.id);
+  const myPlayer = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
   const isReady = myPlayer?.isReady || false;
-  const allReady = currentLobby.players.every(p => p.isReady);
+  const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
