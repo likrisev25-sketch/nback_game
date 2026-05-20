@@ -41,7 +41,7 @@ export async function GET(
     // Получаем все результаты турнира
     const results = await db.query.tournamentResults.findMany({
       where: eq(tournamentResults.tournamentId, tournamentIdStr),
-      orderBy: (results, { desc }) => [desc(results.totalCorrect)],
+      orderBy: (results: typeof tournamentResults, { desc }: any) => [desc(results.totalCorrect)],
     });
 
     return NextResponse.json({
