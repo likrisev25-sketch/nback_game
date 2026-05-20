@@ -47,7 +47,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       tournamentId: tournamentIdStr,
-      results: results.map((r, index) => ({
+      results: results.map((r: typeof tournamentResults.$inferSelect, index: number) => ({
         ...r,
         rank: index + 1,
       })),
@@ -151,7 +151,7 @@ export async function POST(
       success: true,
       tournamentId: tournamentIdStr,
       roundNumber,
-      results: updatedResults.map((r, index) => ({
+      results: updatedResults.map((r: typeof tournamentResults.$inferSelect, index: number) => ({
         ...r,
         rank: index + 1,
       })),
