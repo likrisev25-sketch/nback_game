@@ -492,7 +492,7 @@ async function getLobbyWithPlayers(lobbyId: string): Promise<Lobby | null> {
 
   return {
     ...lobby,
-    players: players.map((p: typeof schema.lobbyPlayers.$inferSelect) => ({
+    players: players.map((p: typeof lobbyPlayers.$inferSelect) => ({
       ...p,
       isReady: Boolean(p.isReady),
       isHost: Boolean(p.isHost),

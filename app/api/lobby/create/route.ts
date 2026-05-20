@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
         return {
           ...lobby,
           currentPlayers: players.length,
-          players: players.map((p: typeof schema.lobbyPlayers.$inferSelect) => ({
+          players: players.map((p: typeof lobbyPlayers.$inferSelect) => ({
             id: p.userId,
             userId: p.userId,
             name: p.name,

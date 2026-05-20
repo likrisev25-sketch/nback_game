@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
+import * as schema from '@/db/schema';
 import { gameSessions, sequences, gamePlayers, gameMoves } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -170,7 +171,7 @@ export async function POST(
       where: eq(gamePlayers.sessionId, sessionIdStr),
     });
 
-    console.log('🔍 Players in session:', players.map((p: typeof schema.gamePlayers.$inferSelect) => ({ id: p.id, name: p.name, isBot: p.isBot, correctAnswers: p.correctAnswers })));
+    console.log('🔍 Players in session:', players.map((p: typeof gamePlayers.$inferSelect) => ({ id: p.id, name: p.name, isBot: p.isBot, correctAnswers: p.correctAnswers })));
 
     const { isCorrect, isMatch } = checkNBackAnswer(
       position,

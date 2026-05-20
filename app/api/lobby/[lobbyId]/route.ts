@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { lobbies, lobbyPlayers } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ lobbyId: string }> }) {
   try {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       success: true,
       lobby: {
         ...lobby,
-        players: players.map((p: typeof schema.lobbyPlayers.$inferSelect) => ({
+        players: players.map((p: typeof lobbyPlayers.$inferSelect) => ({
           id: p.id,
           userId: p.userId,
           name: p.name,
