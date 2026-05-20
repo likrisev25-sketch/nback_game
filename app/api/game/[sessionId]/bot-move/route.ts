@@ -80,7 +80,7 @@ export async function POST(
 
     // Проверяем, не отвечал ли бот уже на этот шаг
     const existingBotMove = await db.query.gameMoves.findFirst({
-      where: (moves, { and, eq }) => and(
+      where: (moves: typeof gameMoves, { and, eq }: any) => and(
         eq(moves.sessionId, sessionIdStr),
         eq(moves.playerId, bot.id),
         eq(moves.stepNumber, stepNumber)

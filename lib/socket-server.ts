@@ -236,7 +236,7 @@ export function initSocket(server: HTTPServer): Server {
         }
 
         // Проверяем что все игроки готовы
-        const allReady = players.every((p) => p.isReady);
+        const allReady = players.every((p: typeof lobbyPlayers.$inferSelect) => p.isReady);
         if (!allReady) {
           socket.emit('lobby:error', { message: 'Не все игроки готовы' });
           return;
@@ -291,7 +291,7 @@ export function initSocket(server: HTTPServer): Server {
             .from(lobbyPlayers)
             .where(eq(lobbyPlayers.lobbyId, lobbyId));
           
-          const allReady = players.every((p) => p.isReady);
+          const allReady = players.every((p: typeof lobbyPlayers.$inferSelect) => p.isReady);
           if (allReady) {
             startCountdown(socket, lobbyId, hostId);
           }
