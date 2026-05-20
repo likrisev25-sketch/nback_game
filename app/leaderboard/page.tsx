@@ -11,9 +11,21 @@ import Link from 'next/link';
 // Отключаем статическую генерацию для этой страницы
 export const dynamic = 'force-dynamic';
 
+/**
+ * Тип игрока для leaderboard
+ */
+type LeaderboardPlayer = {
+  userId: string | null;
+  name: string | null;
+  totalCorrect: number;
+  totalErrors: number;
+  totalGames: number;
+  avgNValue: number | null;
+};
+
 export default async function LeaderboardPage() {
   // Получаем топ игроков по точности (минимум 5 игр)
-  const topPlayersByAccuracy = await db
+  const topPlayersByAccuracy: LeaderboardPlayer[] = await db
     .select({
       userId: gamePlayers.userId,
       name: gamePlayers.name,
@@ -27,11 +39,15 @@ export default async function LeaderboardPage() {
     .where(sql`${gamePlayers.isBot} = 0`)
     .groupBy(gamePlayers.userId, gamePlayers.name)
     .having(sql`COUNT(*) >= 5`)
-    .orderBy(desc(sql`SUM(${gamePlayers.correctAnswers}) / NULLIF(SUM(${gamePlayers.correctAnswers} + ${gamePlayers.errors}), 0)`))
+    .orderBy(
+      desc(
+        sql`SUM(${gamePlayers.correctAnswers}) / NULLIF(SUM(${gamePlayers.correctAnswers} + ${gamePlayers.errors}), 0)`
+      )
+    )
     .limit(50);
 
   // Получаем топ игроков по количеству правильных ответов
-  const topPlayersByScore = await db
+  const topPlayersByScore: LeaderboardPlayer[] = await db
     .select({
       userId: gamePlayers.userId,
       name: gamePlayers.name,
@@ -49,8 +65,9 @@ export default async function LeaderboardPage() {
     .limit(50);
 
   // Функция для расчёта точности
-  const calculateAccuracy = (correct: number, errors: number) => {
+  const calculateAccuracy = (correct: number, errors: number): number => {
     if (correct + errors === 0) return 0;
+
     return Math.round((correct / (correct + errors)) * 100);
   };
 
@@ -62,13 +79,12 @@ export default async function LeaderboardPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             🏆 Таблица лидеров
           </h1>
+
           <p className="text-gray-600 dark:text-gray-400">
             Лучшие игроки N-Back Game
           </p>
         </div>
 
-        {/* Переключатель вкладок можно добавить через JS, пока показываем обе таблицы */}
-        
         {/* Топ по очкам */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -88,90 +104,173 @@ export default async function LeaderboardPage() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                       #
                     </th>
+
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                       Игрок
                     </th>
+
                     <th className="text-center py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                       Игр
                     </th>
+
                     <th className="text-center py-3 px-4 text-sm font-medium text-green-600">
                       Правильно
                     </th>
+
                     <th className="text-center py-3 px-4 text-sm font-medium text-red-600">
                       Ошибки
                     </th>
+
                     <th className="text-center py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                       Точность
                     </th>
+
                     <th className="text-center py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                       Средний N
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {topPlayersByScore.map((player, index) => {
-                    const accuracy = calculateAccuracy(player.totalCorrect, player.totalErrors);
-                    
-                    return (
-                      <tr
-                        key={player.userId}
-                        className={`border-b border-gray-100 dark:border-gray-700 last:border-0 ${
-                          index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''
-                        }`}
-                      >
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
-                              index === 0
-                                ? 'bg-yellow-400 text-yellow-900'
-                                : index === 1
-                                ? 'bg-gray-300 text-gray-700'
-                                : index === 2
-                                ? 'bg-amber-600 text-amber-100'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                            }`}
-                          >
-                            {index + 1}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">
-                          {player.name || `Игрок ${player.userId?.slice(0, 8)}`}
-                        </td>
-                        <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-300">
-                          {player.totalGames}
-                        </td>
-                        <td className="py-3 px-4 text-center text-green-600 font-medium">
-                          {player.totalCorrect}
-                        </td>
-                        <td className="py-3 px-4 text-center text-red-600 font-medium">
-                          {player.totalErrors}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
-                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                              accuracy >= 80
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : accuracy >= 50
-                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            }`}
-                          >
-                            {accuracy}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-300">
-                          N={player.avgNValue?.toFixed(1) || '0.0'}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {topPlayersByScore.map(
+                    (player: LeaderboardPlayer, index: number) => {
+                      const accuracy = calculateAccuracy(
+                        player.totalCorrect,
+                        player.totalErrors
+                      );
+
+                      return (
+                        <tr
+                          key={player.userId ?? index}
+                          className={`border-b border-gray-100 dark:border-gray-700 last:border-0 ${
+                            index < 3
+                              ? 'bg-yellow-50 dark:bg-yellow-900/10'
+                              : ''
+                          }`}
+                        >
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold ${
+                                index === 0
+                                  ? 'bg-yellow-400 text-yellow-900'
+                                  : index === 1
+                                  ? 'bg-gray-300 text-gray-700'
+                                  : index === 2
+                                  ? 'bg-amber-600 text-amber-100'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                              }`}
+                            >
+                              {index + 1}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">
+                            {player.name ||
+                              `Игрок ${player.userId?.slice(0, 8) ?? 'Unknown'}`}
+                          </td>
+
+                          <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-300">
+                            {player.totalGames}
+                          </td>
+
+                          <td className="py-3 px-4 text-center text-green-600 font-medium">
+                            {player.totalCorrect}
+                          </td>
+
+                          <td className="py-3 px-4 text-center text-red-600 font-medium">
+                            {player.totalErrors}
+                          </td>
+
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                accuracy >= 80
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : accuracy >= 50
+                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              }`}
+                            >
+                              {accuracy}%
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-300">
+                            N={player.avgNValue?.toFixed(1) ?? '0.0'}
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
-        {/* Призыв к действию */}
+        {/* Топ по точности */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-2xl">🔥</span>
+            По точности
+          </h2>
+
+          {topPlayersByAccuracy.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              Пока нет игроков с достаточным количеством игр
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4">#</th>
+                    <th className="text-left py-3 px-4">Игрок</th>
+                    <th className="text-center py-3 px-4">Точность</th>
+                    <th className="text-center py-3 px-4">Игр</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {topPlayersByAccuracy.map(
+                    (player: LeaderboardPlayer, index: number) => {
+                      const accuracy = calculateAccuracy(
+                        player.totalCorrect,
+                        player.totalErrors
+                      );
+
+                      return (
+                        <tr
+                          key={player.userId ?? index}
+                          className="border-b border-gray-100 dark:border-gray-700"
+                        >
+                          <td className="py-3 px-4 font-bold">
+                            {index + 1}
+                          </td>
+
+                          <td className="py-3 px-4">
+                            {player.name ||
+                              `Игрок ${player.userId?.slice(0, 8) ?? 'Unknown'}`}
+                          </td>
+
+                          <td className="py-3 px-4 text-center font-medium">
+                            {accuracy}%
+                          </td>
+
+                          <td className="py-3 px-4 text-center">
+                            {player.totalGames}
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Кнопка */}
         <div className="text-center">
           <Link
             href="/#play"
@@ -184,4 +283,3 @@ export default async function LeaderboardPage() {
     </div>
   );
 }
-
