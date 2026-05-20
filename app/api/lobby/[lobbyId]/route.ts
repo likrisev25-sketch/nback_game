@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       success: true,
       lobby: {
         ...lobby,
-        players: players.map((p) => ({
+        players: players.map((p: typeof schema.lobbyPlayers.$inferSelect) => ({
           id: p.id,
           userId: p.userId,
           name: p.name,

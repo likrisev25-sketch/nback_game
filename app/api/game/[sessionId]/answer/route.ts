@@ -170,7 +170,7 @@ export async function POST(
       where: eq(gamePlayers.sessionId, sessionIdStr),
     });
 
-    console.log('🔍 Players in session:', players.map(p => ({ id: p.id, name: p.name, isBot: p.isBot, correctAnswers: p.correctAnswers })));
+    console.log('🔍 Players in session:', players.map((p: typeof schema.gamePlayers.$inferSelect) => ({ id: p.id, name: p.name, isBot: p.isBot, correctAnswers: p.correctAnswers })));
 
     const { isCorrect, isMatch } = checkNBackAnswer(
       position,
