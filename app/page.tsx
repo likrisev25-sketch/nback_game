@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
 } from 'react';
 
 import { useRouter } from 'next/navigation';
@@ -73,22 +74,14 @@ export default function Home() {
   const [loadingGames, setLoadingGames] =
     useState<boolean>(false);
 
-  const playerName =
+  const playerName = useMemo(() =>
     session?.user?.name ||
     session?.user?.email?.split('@')[0] ||
-    'Игрок';
+    'Игрок', [session?.user?.name, session?.user?.email]);
 
-  // Cleanup
+  // Cleanup - запуск только один раз при монтировании
   useEffect(() => {
     isMounted.current = true;
-
-    // Отслеживаем загрузку сессии
-    if (!sessionLoading && session?.user) {
-      hasSessionLoadedRef.current = true;
-    }
-
-    // Не запускаем интервал проверки сессии - это вызывает постоянные ре-рендеры
-    // Сессия будет проверяться только при необходимости (router.refresh() после входа)
 
     return () => {
       isMounted.current = false;
@@ -105,6 +98,13 @@ export default function Home() {
         abortControllerRef.current.abort();
       }
     };
+  }, []); // Пустой массив зависимостей - эффект запускается только один раз
+
+  // Отслеживаем загрузку сессии
+  useEffect(() => {
+    if (!sessionLoading && session?.user) {
+      hasSessionLoadedRef.current = true;
+    }
   }, [sessionLoading, session?.user]);
 
   // Load active games
