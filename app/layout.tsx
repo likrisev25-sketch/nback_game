@@ -1,5 +1,6 @@
 // app/layout.tsx
 import type { Metadata } from "next";
+import { SessionProvider } from "@/lib/auth-client";
 import { TrpcProvider } from "@/lib/trpc-provider";
 import { Header } from "@/components/layout/Header";
 import "./globals.css";
@@ -17,12 +18,14 @@ export default function RootLayout({
   return (
     <html lang="ru" className="scroll-smooth" suppressHydrationWarning>
       <body className="antialiased overflow-x-hidden flex flex-col min-h-screen" suppressHydrationWarning>
-        <TrpcProvider>
-          <Header />
-          <main className="flex-1">
-            {children}
-          </main>
-        </TrpcProvider>
+        <SessionProvider>
+          <TrpcProvider>
+            <Header />
+            <main className="flex-1">
+              {children}
+            </main>
+          </TrpcProvider>
+        </SessionProvider>
       </body>
     </html>
   );

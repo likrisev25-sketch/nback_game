@@ -90,60 +90,83 @@ export const authClient = {
 };
 
 // Хук для получения сессии
-// Используем модульный уровень для кэширования между рендерами
-let sessionCache: { user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null | 'loading' = 'loading';
+// Используем React Context для общего состояния сессии
+import { createContext, useContext, ReactNode } from 'react';
 
-export function useSession() {
-  const [data, setData] = useState<{ user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null>(sessionCache === 'loading' ? null : sessionCache);
-  const [isLoading, setIsLoading] = useState(sessionCache === 'loading');
-  const [error, setError] = useState<Error | null>(null);
-  const isMountedRef = useRef<boolean>(true);
-  const hasLoadedRef = useRef<boolean>(sessionCache !== 'loading');
+interface SessionContextType {
+  data: { user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null;
+  isLoading: boolean;
+  error: Error | null;
+  mutate: () => Promise<void>;
+}
 
-  // Загружаем сессию только один раз при монтировании
+// Создаём контекст один раз
+const SessionContext = createContext<SessionContextType | null>(null);
+
+// Глобальное состояние сессии (один экземпляр для всего приложения)
+let globalSessionData: { user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null = null;
+let globalSessionLoading = true;
+let globalSessionError: Error | null = null;
+let sessionLoadPromise: Promise<void> | null = null;
+let sessionLoadCompleted = false;
+
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const [data, setData] = useState<{ user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null>(globalSessionData);
+  const [isLoading, setIsLoading] = useState(globalSessionLoading);
+  const [error, setError] = useState<Error | null>(globalSessionError);
+  const isMountedRef = useRef(true);
+  const hasInitializedRef = useRef(false);
+
+  const loadSession = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
+    try {
+      setIsLoading(true);
+      const sessionData = await authClient.getSession();
+      if (isMountedRef.current) {
+        globalSessionData = sessionData;
+        globalSessionLoading = false;
+        setData(sessionData);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('🔴 [useSession] Error fetching session:', err);
+      if (isMountedRef.current) {
+        globalSessionData = null;
+        globalSessionLoading = false;
+        globalSessionError = err instanceof Error ? err : new Error('Failed to fetch session');
+        setData(null);
+        setError(globalSessionError);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        globalSessionLoading = false;
+        sessionLoadCompleted = true;
+      }
+    }
+  }, []);
+
   useEffect(() => {
-    if (hasLoadedRef.current) return;
-    
     isMountedRef.current = true;
     
-    const loadSession = async () => {
-      try {
-        setIsLoading(true);
-        const sessionData = await authClient.getSession();
-        if (isMountedRef.current) {
-          sessionCache = sessionData;
-          setData(sessionData);
-          setError(null);
-          hasLoadedRef.current = true;
-        }
-      } catch (err) {
-        console.error('🔴 [useSession] Error fetching session:', err);
-        if (isMountedRef.current) {
-          sessionCache = null;
-          setError(err instanceof Error ? err : new Error('Failed to fetch session'));
-          setData(null);
-          hasLoadedRef.current = true;
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    loadSession();
-    
+    // Загружаем сессию только один раз для всего приложения
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      loadSession();
+    }
+
     return () => {
       isMountedRef.current = false;
     };
-  }, []); // Пустой массив - эффект запускается только один раз
+  }, [loadSession]);
 
   const refetch = useCallback(async () => {
     try {
       setIsLoading(true);
       const sessionData = await authClient.getSession();
       if (isMountedRef.current) {
-        sessionCache = sessionData;
+        globalSessionData = sessionData;
         setData(sessionData);
         setError(null);
       }
@@ -159,12 +182,19 @@ export function useSession() {
     }
   }, []);
 
-  return {
-    data,
-    isLoading,
-    error,
-    mutate: refetch,
-  };
+  return (
+    <SessionContext.Provider value={{ data, isLoading, error, mutate: refetch }}>
+      {children}
+    </SessionContext.Provider>
+  );
+}
+
+export function useSession() {
+  const context = useContext(SessionContext);
+  if (!context) {
+    throw new Error('useSession must be used within SessionProvider');
+  }
+  return context;
 }
 
 export const { signIn, signUp, signOut, getSession } = authClient;
