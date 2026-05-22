@@ -92,25 +92,53 @@ export const authClient = {
 // Хук для получения сессии
 // Используем модульный уровень для кэширования между рендерами
 let sessionCache: { user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null | 'loading' = 'loading';
-let sessionCachePromise: Promise<{ user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } | null }> | null = null;
 
 export function useSession() {
   const [data, setData] = useState<{ user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null>(sessionCache === 'loading' ? null : sessionCache);
   const [isLoading, setIsLoading] = useState(sessionCache === 'loading');
   const [error, setError] = useState<Error | null>(null);
   const isMountedRef = useRef<boolean>(true);
-  const fetchOnceRef = useRef<boolean>(false);
+  const hasLoadedRef = useRef<boolean>(sessionCache !== 'loading');
 
-  const fetchSession = useCallback(async () => {
-    if (!isMountedRef.current) return;
+  // Загружаем сессию только один раз при монтировании
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
     
-    // Если уже загружали - не загружаем снова
-    if (fetchOnceRef.current && sessionCache !== 'loading') {
-      setData(sessionCache);
-      setIsLoading(false);
-      return;
-    }
+    isMountedRef.current = true;
+    
+    const loadSession = async () => {
+      try {
+        setIsLoading(true);
+        const sessionData = await authClient.getSession();
+        if (isMountedRef.current) {
+          sessionCache = sessionData;
+          setData(sessionData);
+          setError(null);
+          hasLoadedRef.current = true;
+        }
+      } catch (err) {
+        console.error('🔴 [useSession] Error fetching session:', err);
+        if (isMountedRef.current) {
+          sessionCache = null;
+          setError(err instanceof Error ? err : new Error('Failed to fetch session'));
+          setData(null);
+          hasLoadedRef.current = true;
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    loadSession();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []); // Пустой массив - эффект запускается только один раз
 
+  const refetch = useCallback(async () => {
     try {
       setIsLoading(true);
       const sessionData = await authClient.getSession();
@@ -118,15 +146,11 @@ export function useSession() {
         sessionCache = sessionData;
         setData(sessionData);
         setError(null);
-        fetchOnceRef.current = true;
       }
     } catch (err) {
-      console.error('🔴 [useSession] Error fetching session:', err);
+      console.error('🔴 [useSession] Error refetching session:', err);
       if (isMountedRef.current) {
-        sessionCache = null;
         setError(err instanceof Error ? err : new Error('Failed to fetch session'));
-        setData(null);
-        fetchOnceRef.current = true;
       }
     } finally {
       if (isMountedRef.current) {
@@ -135,22 +159,11 @@ export function useSession() {
     }
   }, []);
 
-  useEffect(() => {
-    // Загружаем сессию только один раз при монтировании
-    if (!fetchOnceRef.current) {
-      fetchSession();
-    }
-    
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchSession]);
-
   return {
     data,
     isLoading,
     error,
-    mutate: fetchSession,
+    mutate: refetch,
   };
 }
 

@@ -83,6 +83,11 @@ export default function Home() {
   useEffect(() => {
     isMounted.current = true;
 
+    // Устанавливаем флаг, что сессия была загружена
+    if (!sessionLoading && session?.user) {
+      hasSessionLoadedRef.current = true;
+    }
+
     return () => {
       isMounted.current = false;
 
@@ -99,13 +104,6 @@ export default function Home() {
       }
     };
   }, []); // Пустой массив зависимостей - эффект запускается только один раз
-
-  // Отслеживаем загрузку сессии
-  useEffect(() => {
-    if (!sessionLoading && session?.user) {
-      hasSessionLoadedRef.current = true;
-    }
-  }, [sessionLoading, session?.user]);
 
   // Load active games
   const loadActiveGames = useCallback(async () => {
@@ -255,8 +253,8 @@ export default function Home() {
     [playerName, session]
   );
 
-  // Loading screen - показываем только если сессия ещё не загружалась вообще
-  if (sessionLoading && !hasSessionLoadedRef.current && !session?.user) {
+  // Loading screen - показываем только пока загружается сессия
+  if (sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -264,8 +262,8 @@ export default function Home() {
     );
   }
 
-  // Not authenticated - только если точно не загружается и не было сессии
-  if (!session?.user && !sessionLoading && !hasSessionLoadedRef.current) {
+  // Not authenticated - показываем форму входа
+  if (!session?.user) {
     return <LandingAuth />;
   }
 
