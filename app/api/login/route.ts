@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
     
     console.log('🔵 [LOGIN] Cookie set successfully');
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [LOGIN] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Login failed' },
+      { error: (error as Error).message || 'Login failed' },
       { status: 500 }
     );
   }

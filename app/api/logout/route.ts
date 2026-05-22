@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     });
     console.log('✅ [LOGOUT] Session cookie cleared');
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [LOGOUT] Error:', error);
     return NextResponse.json(
       { error: 'Logout failed' },

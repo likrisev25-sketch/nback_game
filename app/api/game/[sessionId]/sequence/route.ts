@@ -11,6 +11,13 @@ export async function GET(
     const { sessionId } = await params;
     const sessionIdStr = String(sessionId);
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Получаем сессию
     // @ts-ignore
     const session = await db.query.gameSessions.findFirst({

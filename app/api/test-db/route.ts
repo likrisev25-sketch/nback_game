@@ -19,11 +19,11 @@ export async function GET() {
       dbConnected: true,
       usersCount: users.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [test-db] Error:', error);
     return NextResponse.json({
-      error: error.message,
-      stack: error.stack,
+      error: (error as Error).message,
+      stack: (error as Error).stack,
     }, { status: 500 });
   }
 }

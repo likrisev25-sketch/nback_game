@@ -7,6 +7,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { lobbyId } = await params;
 
+    if (!db) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
     const [lobby] = await db
       .select()
       .from(lobbies)

@@ -118,6 +118,13 @@ export async function POST(
 
     console.log('📥 Body:', { playerId: playerIdStr, position, stepNumber, playerAnswer });
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Проверяем сессию
     const session = await db.query.gameSessions.findFirst({
       where: eq(gameSessions.id, sessionIdStr),
@@ -192,7 +199,7 @@ export async function POST(
     // Проверяем, не отправлял ли игрок уже ответ на этот шаг (после проверки ответа)
     console.log('🔍 Проверяем дубликаты ответа...');
     const existingMove = await db.query.gameMoves.findFirst({
-      where: (moves: typeof gameMoves, { and, eq }: any) => and(
+      where: (moves, { and, eq }) => and(
         eq(moves.sessionId, sessionIdStr),
         eq(moves.playerId, playerIdStr),
         eq(moves.stepNumber, stepNumber)
@@ -237,7 +244,7 @@ export async function POST(
     if (!moveInserted) {
       // Ход уже существовал - возвращаем существующий результат без обновления статистики
       const fallbackMove = await db.query.gameMoves.findFirst({
-        where: (moves: typeof gameMoves, { and, eq }: any) => and(
+        where: (moves, { and, eq }) => and(
           eq(moves.sessionId, sessionIdStr),
           eq(moves.playerId, playerIdStr),
           eq(moves.stepNumber, stepNumber)

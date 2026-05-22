@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     
     // Поиск сессии по токену (без with, чтобы избежать ошибки referencedTable)
     const sessionData = await db.query.sessions.findFirst({
-      where: (sessions: typeof schema.sessions, { eq }: any) => eq(sessions.token, token),
+      where: (sessions, { eq }) => eq(sessions.token, token),
     });
     
     console.log('🔵 [session] Session from DB:', sessionData ? 'found' : 'not found');
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     
     // Отдельный запрос для получения пользователя
     const user = await db.query.users.findFirst({
-      where: (users: typeof schema.users, { eq }: any) => eq(users.id, sessionData.userId),
+      where: (users, { eq }) => eq(users.id, sessionData.userId),
     });
     
     console.log('🔵 [session] User from DB:', user ? 'found' : 'not found');
@@ -65,9 +65,9 @@ export async function GET(request: NextRequest) {
         expiresAt: sessionData.expiresAt,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [session] Error:', error);
-    console.error('❌ [session] Stack:', error.stack);
+    console.error('❌ [session] Stack:', (error as Error).stack);
     return NextResponse.json({ user: null, session: null });
   }
 }

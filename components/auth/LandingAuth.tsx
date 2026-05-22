@@ -14,11 +14,14 @@ interface LandingAuthProps {
  * Показывает формы входа/регистрации перед доступом к игре
  */
 export function LandingAuth({ onAuthSuccess }: LandingAuthProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<'login' | 'register'>('register');
 
   const handleSuccess = () => {
     console.log('🔵 [LandingAuth] Auth success callback called');
-    // Не вызываем onAuthSuccess здесь - страница page.tsx сама проверит сессию
+    // Обновляем страницу, чтобы получить новую сессию
+    router.refresh();
+    onAuthSuccess?.();
   };
 
   return (

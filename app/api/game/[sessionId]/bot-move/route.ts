@@ -36,6 +36,13 @@ export async function POST(
 
     console.log('🤖 [bot-move] Шаг', stepNumber, 'сессия', sessionIdStr);
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Проверяем сессию
     const session = await db.query.gameSessions.findFirst({
       where: eq(gameSessions.id, sessionIdStr),
@@ -65,7 +72,7 @@ export async function POST(
 
     // Находим бота
     const bot = await db.query.gamePlayers.findFirst({
-      where: (players: typeof gamePlayers, { and, eq }: any) => and(
+      where: (players, { and, eq }) => and(
         eq(players.sessionId, sessionIdStr),
         eq(players.isBot, true)
       ),
@@ -80,7 +87,7 @@ export async function POST(
 
     // Проверяем, не отвечал ли бот уже на этот шаг
     const existingBotMove = await db.query.gameMoves.findFirst({
-      where: (moves: typeof gameMoves, { and, eq }: any) => and(
+      where: (moves, { and, eq }) => and(
         eq(moves.sessionId, sessionIdStr),
         eq(moves.playerId, bot.id),
         eq(moves.stepNumber, stepNumber)

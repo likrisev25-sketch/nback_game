@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { gameSessions, gamePlayers } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('📋 [list/route] Получение списка игр...');
     
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Получаем только активные сессии в статусе "waiting" (ожидают игроков)
     console.log('📋 [list/route] Запрос к БД...');
     const sessions = await db.query.gameSessions.findMany({
       where: eq(gameSessions.status, 'waiting'),
-      orderBy: (sessions: typeof gameSessions, { desc }: any) => [desc(sessions.createdAt)],
+      orderBy: (sessions, { desc }) => [desc(sessions.createdAt)],
     });
 
     console.log('📋 [list/route] Найдено сессий:', sessions.length);
@@ -19,9 +26,9 @@ export async function GET(request: NextRequest) {
     // Преобразуем данные в удобной форме
     const games = await Promise.all(sessions.map(async (session: typeof gameSessions.$inferSelect) => {
       // Получаем игроков для каждой сессии отдельно
-      const players = await db.query.gamePlayers.findMany({
+      const players = db ? await db.query.gamePlayers.findMany({
         where: eq(gamePlayers.sessionId, session.id),
-      });
+      }) : [];
       
       const playerCount = players.length;
       const maxPlayers = session.maxPlayers;

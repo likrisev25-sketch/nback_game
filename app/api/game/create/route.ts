@@ -55,6 +55,13 @@ export async function POST(request: NextRequest) {
     
     const { name, nValue, totalSteps, baseSpeedMs, maxPlayers, addBot, botAccuracy, playerName } = body;
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Генерируем уникальный 6-значный числовой ID с проверкой на коллизии
     let sessionId: string;
     let attempts = 0;

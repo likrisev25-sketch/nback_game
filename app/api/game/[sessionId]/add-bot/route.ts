@@ -53,6 +53,13 @@ export async function POST(
     const now = new Date().toISOString();
     const botName = name || `Bot-${Math.round(accuracy * 100)}%`;
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Создаем бота
     const [bot] = await db.insert(gamePlayers).values({
       id: uuidv4(),

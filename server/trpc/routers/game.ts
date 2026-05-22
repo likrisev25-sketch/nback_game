@@ -360,7 +360,7 @@ export const gameRouter = router({
 
       const players = await db.query.gamePlayers.findMany({
         where: eq(gamePlayers.sessionId, input.sessionId),
-        orderBy: (players: typeof gamePlayers, { desc }: any) => [desc(players.correctAnswers)],
+        orderBy: (players, { desc }) => [desc(players.correctAnswers)],
       });
 
       return {
@@ -399,7 +399,7 @@ export const gameRouter = router({
 
       const players = await db.query.gamePlayers.findMany({
         where: eq(gamePlayers.sessionId, input.sessionId),
-        orderBy: (players: typeof gamePlayers, { desc }: any) => [desc(players.correctAnswers)],
+        orderBy: (players, { desc }) => [desc(players.correctAnswers)],
       });
 
       const winner = players[0];

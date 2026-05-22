@@ -16,7 +16,7 @@ if (!sql) {
 }
 
 // Создаём экземпляр drizzle с подключением и схемой
-export const db = sql ? drizzle(sql, { schema }) : null as any;
+export const db = sql ? drizzle(sql, { schema }) : null;
 
 if (db) {
   console.log('✅ [db] Database connection initialized successfully');

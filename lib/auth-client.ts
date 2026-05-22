@@ -2,7 +2,7 @@
 // Updated: 2024-05-17 - Removed Better Auth dependency
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
 
@@ -89,29 +89,41 @@ export const authClient = {
   },
 };
 
-// Хук для получения сессии с использованием React Query
+// Хук для получения сессии
 export function useSession() {
-  const [data, setData] = useState<{ user: any; session: any } | null>(null);
+  const [data, setData] = useState<{ user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const isMountedRef = useRef<boolean>(true);
 
   const fetchSession = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     try {
-      setIsLoading(true);
       const sessionData = await authClient.getSession();
-      setData(sessionData);
-      setError(null);
+      if (isMountedRef.current) {
+        setData(sessionData);
+        setError(null);
+      }
     } catch (err) {
       console.error('🔴 [useSession] Error fetching session:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch session'));
-      setData({ user: null, session: null });
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch session'));
+        setData(null);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     fetchSession();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchSession]);
 
   return {

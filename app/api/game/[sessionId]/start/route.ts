@@ -16,6 +16,13 @@ export async function POST(
     const session = await getSessionFromRequest(request);
     const userId = session?.user?.id;
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Проверяем существование сессии
     console.log('🔵 Checking if session exists in DB...');
     const gameSession = await db.query.gameSessions.findFirst({

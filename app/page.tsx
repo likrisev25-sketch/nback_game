@@ -82,15 +82,8 @@ export default function Home() {
   useEffect(() => {
     isMounted.current = true;
 
-    if (!sessionLoading && !session?.user) {
-      sessionIntervalRef.current = setInterval(async () => {
-        if (!isMounted.current) return;
-
-        console.log('🔵 [session polling] Checking session...');
-
-        await refetchSession();
-      }, 2000);
-    }
+    // Не запускаем интервал проверки сессии - это вызывает постоянные ре-рендеры
+    // Сессия будет проверяться только при необходимости (router.refresh() после входа)
 
     return () => {
       isMounted.current = false;
@@ -107,7 +100,7 @@ export default function Home() {
         abortControllerRef.current.abort();
       }
     };
-  }, [sessionLoading, session?.user, refetchSession]);
+  }, []);
 
   // Load active games
   const loadActiveGames = useCallback(async () => {

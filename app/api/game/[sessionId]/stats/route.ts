@@ -11,6 +11,13 @@ export async function GET(
     const { sessionId } = await params;
     console.log('📊 [stats] Запрос статистики для sessionId:', sessionId);
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     // Получаем сессию
     const session = await db.query.gameSessions.findFirst({
       where: eq(gameSessions.id, sessionId),

@@ -2,6 +2,7 @@ import { db } from '@/db/db';
 import * as schema from '@/db/schema';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
+import type { InferSelectModel } from 'drizzle-orm';
 
 // Проверяем наличие секретного ключа
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -18,6 +19,10 @@ if (!db) {
   console.log('✅ [auth] Database connection initialized');
 }
 
+// Типы для моделей
+export type User = InferSelectModel<typeof schema.users>;
+export type Session = InferSelectModel<typeof schema.sessions>;
+
 // Простая кастомная аутентификация
 const auth = {
   // Регистрация
@@ -33,7 +38,7 @@ const auth = {
       console.log('🔵 [auth] Checking if user exists...');
       // Проверка, существует ли пользователь
       const existing = await db.query.users.findFirst({
-        where: (users: typeof schema.users, { eq }: any) => eq(users.email, email),
+        where: (users, { eq }) => eq(users.email, email),
       });
       
       console.log('🔵 [auth] Existing user:', existing);
@@ -82,7 +87,7 @@ const auth = {
       }).returning();
       
       return { user: user[0], session: session[0] };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign up error:', error);
       throw error;
     }
@@ -101,7 +106,7 @@ const auth = {
       console.log('🔵 [auth] Searching for user...');
       // Поиск пользователя
       const user = await db.query.users.findFirst({
-        where: (users: typeof schema.users, { eq }: any) => eq(users.email, email),
+        where: (users, { eq }) => eq(users.email, email),
       });
       
       console.log('🔵 [auth] Found user:', user);
@@ -112,7 +117,7 @@ const auth = {
       
       // Поиск пароля в accounts
       const account = await db.query.accounts.findFirst({
-        where: (accounts: typeof schema.accounts, { eq }: any) => eq(accounts.userId, user.id),
+        where: (accounts, { eq }) => eq(accounts.userId, user.id),
       });
       
       if (!account || !account.password) {
@@ -140,7 +145,7 @@ const auth = {
       }).returning();
       
       return { user, session: session[0] };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign in error:', error);
       throw error;
     }
@@ -148,21 +153,21 @@ const auth = {
   
   // Выход
   signOut: async (sessionId: string) => {
-    await db.delete(schema.sessions).where((sessions: typeof schema.sessions, { eq }: any) => eq(sessions.id, sessionId));
+    await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));
   },
   
   // Получение сессии
   getSession: async (token: string) => {
     // Поиск сессии без with
     const session = await db.query.sessions.findFirst({
-      where: (sessions: typeof schema.sessions, { eq }: any) => eq(sessions.token, token),
+      where: (sessions, { eq }) => eq(sessions.token, token),
     });
     
     if (!session) return null;
     
     // Отдельный запрос для пользователя
     const user = await db.query.users.findFirst({
-      where: (users: typeof schema.users, { eq }: any) => eq(users.id, session.userId),
+      where: (users, { eq }) => eq(users.id, session.userId),
     });
     
     if (!user) return null;
@@ -172,9 +177,6 @@ const auth = {
 };
 
 console.log('✅ [auth] Custom auth initialized successfully!');
-
-export type Session = any;
-export type User = any;
 
 // Экспортируем auth как объект с обработчиками
 export { auth };

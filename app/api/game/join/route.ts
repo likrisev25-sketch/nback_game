@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 500 }
+      );
+    }
+
     console.log('🔵 [join] Попытка присоединиться к игре:', sessionId);
 
     // Проверяем сессию

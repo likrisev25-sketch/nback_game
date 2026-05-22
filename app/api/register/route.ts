@@ -38,11 +38,11 @@ export async function POST(request: NextRequest) {
     
     console.log('🔵 [REGISTER] Cookie set successfully');
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [REGISTER] Error:', error);
-    console.error('❌ [REGISTER] Error stack:', error.stack);
+    console.error('❌ [REGISTER] Error stack:', (error as Error).stack);
     return NextResponse.json(
-      { error: error.message || 'Registration failed' },
+      { error: (error as Error).message || 'Registration failed' },
       { status: 500 }
     );
   }
