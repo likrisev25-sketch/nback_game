@@ -159,7 +159,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       isMountedRef.current = false;
     };
-  }, [loadSession]);
+    // Убрали loadSession из зависимостей - он уже стабилен благодаря useCallback([])
+  }, []);
 
   const refetch = useCallback(async () => {
     try {
