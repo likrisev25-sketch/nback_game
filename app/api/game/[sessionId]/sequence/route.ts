@@ -19,7 +19,6 @@ export async function GET(
     }
 
     // Получаем сессию
-    // @ts-ignore
     const session = await db.query.gameSessions.findFirst({
       where: eq(gameSessions.id, sessionIdStr),
     });

@@ -169,9 +169,17 @@ export default function Home() {
         }
       };
     }
-  }, [currentScreen, loadActiveGames]);
+    // loadActiveGames стабильна благодаря useCallback с пустым массивом зависимостей
+  }, [currentScreen]);
 
   // Join session
+  // Используем ref для session.user.id чтобы избежать пересоздания joinSession
+  const sessionUserIdRef = useRef<string | undefined>(undefined);
+  
+  useEffect(() => {
+    sessionUserIdRef.current = session?.user?.id;
+  }, [session?.user?.id]);
+
   const joinSession = useCallback(
     async (sessionId: string) => {
       if (joiningRef.current) return;
@@ -196,7 +204,7 @@ export default function Home() {
           body: JSON.stringify({
             sessionId,
             playerName,
-            userId: session?.user?.id,
+            userId: sessionUserIdRef.current,
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -250,7 +258,7 @@ export default function Home() {
         }
       }
     },
-    [playerName, session]
+    [playerName]
   );
 
   // Loading screen - показываем только пока загружается сессия
