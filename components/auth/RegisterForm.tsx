@@ -73,9 +73,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           return;
         }
 
-        console.log('✅ [RegisterForm] Registration successful, refreshing page...');
-        router.refresh();
-        onSuccess?.();
+        console.log('✅ [RegisterForm] Registration successful, redirecting...');
+        // Вместо router.refresh() делаем полный редирект на главную
+        // Это гарантирует обновление сессии и предотвращает цикл обновлений
+        window.location.href = '/';
       } catch (err: unknown) {
         console.error('❌ [RegisterForm] Registration exception:', err);
         setServerError(err instanceof Error ? err.message : 'Произошла ошибка при регистрации. Попробуйте снова.');

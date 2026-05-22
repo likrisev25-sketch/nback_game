@@ -61,10 +61,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           return;
         }
 
-        console.log('✅ [LoginForm] Login successful, refreshing page...');
-        // Явно обновляем данные и редиректим
-        router.refresh();
-        onSuccess?.();
+        console.log('✅ [LoginForm] Login successful, redirecting...');
+        // Вместо router.refresh() делаем полный редирект на главную
+        window.location.href = '/';
       } catch (err: unknown) {
         console.error('❌ [LoginForm] Login exception:', err);
         setServerError(err instanceof Error ? err.message : 'Произошла ошибка при входе. Попробуйте снова.');

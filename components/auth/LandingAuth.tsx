@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 
@@ -14,14 +13,12 @@ interface LandingAuthProps {
  * Показывает формы входа/регистрации перед доступом к игре
  */
 export function LandingAuth({ onAuthSuccess }: LandingAuthProps) {
-  const router = useRouter();
   const [mode, setMode] = useState<'login' | 'register'>('register');
 
   const handleSuccess = () => {
     console.log('🔵 [LandingAuth] Auth success callback called');
-    // Обновляем страницу, чтобы получить новую сессию
-    router.refresh();
-    onAuthSuccess?.();
+    // Формы входа/регистрации сами делают редирект через window.location.href
+    // Здесь ничего делать не нужно
   };
 
   return (

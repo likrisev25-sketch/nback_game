@@ -18,7 +18,6 @@ import { useSession } from '@/lib/auth-client';
 export default function Home() {
   const router = useRouter();
 
-  // FIX: isPending -> isLoading
   const {
     data: session,
     isLoading: sessionLoading,
@@ -27,6 +26,7 @@ export default function Home() {
 
   const isMounted = useRef<boolean>(true);
   const joiningRef = useRef<boolean>(false);
+  const hasSessionLoadedRef = useRef<boolean>(false); // Флаг: сессия хотя бы раз загрузилась
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -82,6 +82,11 @@ export default function Home() {
   useEffect(() => {
     isMounted.current = true;
 
+    // Отслеживаем загрузку сессии
+    if (!sessionLoading && session?.user) {
+      hasSessionLoadedRef.current = true;
+    }
+
     // Не запускаем интервал проверки сессии - это вызывает постоянные ре-рендеры
     // Сессия будет проверяться только при необходимости (router.refresh() после входа)
 
@@ -100,7 +105,7 @@ export default function Home() {
         abortControllerRef.current.abort();
       }
     };
-  }, []);
+  }, [sessionLoading, session?.user]);
 
   // Load active games
   const loadActiveGames = useCallback(async () => {
@@ -250,8 +255,8 @@ export default function Home() {
     [playerName, session]
   );
 
-  // Loading screen
-  if (sessionLoading) {
+  // Loading screen - показываем только если сессия ещё не загружалась вообще
+  if (sessionLoading && !hasSessionLoadedRef.current && !session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -259,8 +264,8 @@ export default function Home() {
     );
   }
 
-  // Not authenticated
-  if (!session?.user) {
+  // Not authenticated - только если точно не загружается и не было сессии
+  if (!session?.user && !sessionLoading && !hasSessionLoadedRef.current) {
     return <LandingAuth />;
   }
 
