@@ -1,5 +1,6 @@
 import { db } from '@/db/db';
 import * as schema from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
 import type { InferSelectModel } from 'drizzle-orm';

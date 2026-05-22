@@ -24,8 +24,8 @@ export const UserMenu: React.FC = () => {
 
   // Кэшируем сессию на уровне компонента
   useEffect(() => {
-    if (session && !hasLoadedRef.current) {
-      sessionCache = session.user;
+    if (session?.user && !hasLoadedRef.current) {
+      sessionCache = { user: session.user };
       cacheLoaded = true;
       hasLoadedRef.current = true;
     }

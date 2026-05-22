@@ -7,6 +7,10 @@ import { getSessionFromRequest } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
+
     // Проверяем авторизацию
     const session = await getSessionFromRequest(request);
     if (!session || !session.user) {
@@ -79,6 +83,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    if (!db) {
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
+
     const session = await getSessionFromRequest(request);
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
