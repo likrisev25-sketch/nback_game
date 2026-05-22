@@ -21,28 +21,34 @@ export const Header: React.FC = () => {
           {/* Навигация */}
           <nav className="hidden md:flex items-center gap-6">
             <Link
-              href="/#about"
+              href="/about"
               className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm transition-colors"
             >
-              О игре
+              🧠 О игре
             </Link>
             <Link
-              href="/#how"
-              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm transition-colors"
+              href="/how-to-play"
+              className="text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 font-medium text-sm transition-colors"
             >
-              Как играть
+              📖 Как играть
             </Link>
             <Link
-              href="/#play"
-              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm transition-colors"
+              href="/training"
+              className="text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium text-sm transition-colors"
             >
-              Тренировка
+              🏋️ Тренировка
             </Link>
             <Link
-              href="/tournament"
-              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm transition-colors"
+              href="/tournament-info"
+              className="text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium text-sm transition-colors"
             >
               🏆 Турниры
+            </Link>
+            <Link
+              href="/lobbies"
+              className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm transition-colors"
+            >
+              🎮 Игра
             </Link>
           </nav>
 

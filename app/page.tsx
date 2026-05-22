@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { NBackGame } from '@/components/game/NBackGame';
 import { GameLobby } from '@/components/game/GameLobby';
 import { LandingAuth } from '@/components/auth/LandingAuth';
+import Link from 'next/link';
 
 import { useSession } from '@/lib/auth-client';
 
@@ -309,18 +310,50 @@ export default function Home() {
         </h2>
 
         <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-          Развивай рабочую память и
-          концентрацию
+          Развивай рабочую память и концентрацию
         </p>
 
-        <button
-          onClick={() =>
-            router.push('/tournament')
-          }
-          className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-bold"
-        >
-          🏆 Турниры
-        </button>
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <Link
+            href="/about"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full font-bold hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
+          >
+            🧠 О игре
+          </Link>
+          <Link
+            href="/how-to-play"
+            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full font-bold hover:from-purple-600 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+          >
+            📖 Как играть
+          </Link>
+          <Link
+            href="/training"
+            className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105 shadow-lg"
+          >
+            🏋️ Тренировка
+          </Link>
+          <Link
+            href="/tournament-info"
+            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full font-bold hover:from-orange-600 hover:to-orange-700 transition-all transform hover:scale-105 shadow-lg"
+          >
+            🏆 Турниры
+          </Link>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <button
+            onClick={() => router.push('/lobbies')}
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-xl"
+          >
+            🎮 Начать игру
+          </button>
+          <button
+            onClick={() => router.push('/tournament-info')}
+            className="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-full font-bold text-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 shadow-xl"
+          >
+            🏆 Турниры
+          </button>
+        </div>
       </section>
     </div>
   );
