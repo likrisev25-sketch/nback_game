@@ -72,6 +72,8 @@ export const LobbyList: React.FC = () => {
     if (!session?.user) return;
 
     try {
+      console.log('🔵 [LobbyList] Создание лобби для пользователя:', session.user.id, session.user.name);
+      
       const response = await fetch('/api/lobby/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,10 +85,12 @@ export const LobbyList: React.FC = () => {
           nValue: formData.nValue,
           baseSpeedMs: formData.baseSpeedMs,
           password: formData.password || undefined,
+          userName: session.user.name || 'Игрок',
         }),
       });
 
       const data = await response.json();
+      console.log('📥 [LobbyList] Ответ от сервера:', data);
       
       if (data.success) {
         // Сохраняем lobbyId для модального окна выбора
@@ -97,10 +101,11 @@ export const LobbyList: React.FC = () => {
         setShowCreateModal(false);
         setShowStartChoiceModal(true);
       } else {
+        console.error('❌ [LobbyList] Ошибка создания лобби:', data.error);
         setError(data.error || 'Не удалось создать лобби');
       }
     } catch (error) {
-      console.error('Error creating lobby:', error);
+      console.error('❌ [LobbyList] Исключение при создании лобби:', error);
       setError('Произошла ошибка при создании лобби');
     }
   };
