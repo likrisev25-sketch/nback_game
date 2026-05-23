@@ -334,13 +334,22 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+          <Link
+            href="/play"
+            className="px-8 py-4 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-full font-bold text-lg hover:from-green-700 hover:to-teal-700 transition-all transform hover:scale-105 shadow-xl"
+          >
+            🎯 Игра с ботом
+          </Link>
           <button
             onClick={() => router.push('/lobbies')}
             className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-xl"
           >
-            🎮 Начать игру
+            🎮 Многопользовательская игра
           </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
           <button
             onClick={() => router.push('/tournaments')}
             className="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-full font-bold text-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 shadow-xl"

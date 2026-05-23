@@ -1,45 +1,29 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from './schema';
-import * as fs from 'fs';
-import * as path from 'path';
-import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
 
 console.log('🔵 [db] Initializing database connection...');
 console.log('🔵 [db] NODE_ENV:', process.env.NODE_ENV);
 console.log('🔵 [db] DATABASE_URL set:', !!process.env.DATABASE_URL);
 
-let db = null;
+// Для Vercel используем только Neon PostgreSQL
+const sql = process.env.DATABASE_URL 
+  ? neon(process.env.DATABASE_URL)
+  : null;
 
-// Проверяем, есть ли DATABASE_URL
-if (process.env.DATABASE_URL) {
-  try {
-    const sql = neon(process.env.DATABASE_URL);
-    db = drizzle(sql, { schema });
-    console.log('✅ [db] Connected to Neon PostgreSQL');
-  } catch (error) {
-    console.warn('⚠️ [db] Failed to connect to Neon, falling back to SQLite:', error.message);
-  }
+if (!sql) {
+  console.error('❌ [db] DATABASE_URL is not set!');
+  throw new Error('DATABASE_URL environment variable is required');
 }
 
-// Если не удалось подключиться к Neon, используем SQLite
-if (!db) {
-  try {
-    const sqlitePath = path.join(process.cwd(), 'nback.db');
-    const sqlite = new Database(sqlitePath);
-    db = drizzleSqlite(sqlite, { schema });
-    console.log('✅ [db] Connected to local SQLite (nback.db)');
-  } catch (error) {
-    console.error('❌ [db] Failed to connect to SQLite:', error.message);
-  }
-}
+export const db = drizzle(sql, { schema });
 
-// Экспортируем тип
+console.log('✅ [db] Connected to Neon PostgreSQL');
+
+// Экспортируем типы
 export type User = typeof schema.users.$inferSelect;
 export type GameSession = typeof schema.gameSessions.$inferSelect;
 export type GamePlayer = typeof schema.gamePlayers.$inferSelect;
 export type GameMove = typeof schema.gameMoves.$inferSelect;
 export type TournamentResult = typeof schema.tournamentResults.$inferSelect;
 
-export { db };
