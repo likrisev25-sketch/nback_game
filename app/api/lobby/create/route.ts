@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { lobbies, lobbyPlayers } from '@/db/schema';
 import { nanoid } from 'nanoid';
-import { eq, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('🔵 [lobby/create] Request body:', body);
     
-    const { gameId, name, nValue = 2, baseSpeedMs = 2000, minPlayers = 2, maxPlayers = 2, password } = body;
+    const { 
+      gameId,
+      name, 
+      nValue = 2, 
+      baseSpeedMs = 2000, 
+      minPlayers = 2, 
+      maxPlayers = 2, 
+      password,
+      addBot = false,
+      botAccuracy = 80,
+      botName = 'Бот'
+    } = body;
 
     if (!gameId) {
       console.error('❌ [lobby/create] Missing gameId');
@@ -33,6 +44,9 @@ export async function POST(request: NextRequest) {
     const lobbyId = nanoid();
     const lobbyName = name || `Лобби ${lobbyId.slice(0, 6)}`;
 
+    // Вычисляем фактическое максимальное количество игроков
+    const actualMaxPlayers = addBot ? maxPlayers + 1 : maxPlayers;
+
     await db.insert(lobbies).values({
       id: lobbyId,
       gameId,
@@ -40,8 +54,8 @@ export async function POST(request: NextRequest) {
       status: 'waiting',
       nValue,
       baseSpeedMs,
-      minPlayers,
-      maxPlayers,
+      minPlayers: addBot ? Math.max(minPlayers - 1, 1) : minPlayers,
+      maxPlayers: actualMaxPlayers,
       currentPlayers: 1,
       hostId: userId,
       password: password || null,
@@ -60,6 +74,21 @@ export async function POST(request: NextRequest) {
       joinedAt: new Date().toISOString(),
     });
 
+    // Добавляем бота если запрошено
+    if (addBot) {
+      const botId = nanoid();
+      await db.insert(lobbyPlayers).values({
+        id: botId,
+        lobbyId,
+        userId: botId, // Бот имеет свой собственный ID
+        name: `${botName} (${botAccuracy}%)`,
+        isReady: true, // Бот всегда готов
+        isHost: false,
+        joinedAt: new Date().toISOString(),
+      });
+      console.log('✅ [lobby/create] Bot added:', `${botName} (${botAccuracy}%)`);
+    }
+
     console.log('✅ [lobby/create] Lobby created successfully:', lobbyId);
 
     const [createdLobby] = await db
@@ -68,18 +97,25 @@ export async function POST(request: NextRequest) {
       .where(eq(lobbies.id, lobbyId))
       .limit(1);
 
+    // Получаем всех игроков
+    const players = await db
+      .select()
+      .from(lobbyPlayers)
+      .where(eq(lobbyPlayers.lobbyId, lobbyId));
+
     return NextResponse.json({
       success: true,
       lobby: {
         ...createdLobby,
-        players: [{
-          id: userId,
-          userId,
-          name: userName,
-          isReady: false,
-          isHost: true,
-          joinedAt: new Date().toISOString(),
-        }],
+        players: players.map((p: typeof lobbyPlayers.$inferSelect) => ({
+          id: p.userId,
+          userId: p.userId,
+          name: p.name,
+          isReady: Boolean(p.isReady),
+          isHost: Boolean(p.isHost),
+          joinedAt: p.joinedAt,
+          isBot: p.userId.startsWith('bot_') || (addBot && p.name.includes('Бот')),
+        })),
       },
     });
   } catch (error) {

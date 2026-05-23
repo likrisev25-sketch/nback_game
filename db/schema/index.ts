@@ -158,6 +158,8 @@ export const lobbyPlayers = pgTable('lobby_players', {
   name: text('name').notNull(),
   isReady: boolean('is_ready').notNull().default(false),
   isHost: boolean('is_host').notNull().default(false),
+  isBot: boolean('is_bot').notNull().default(false),
+  botAccuracy: integer('bot_accuracy').notNull().default(100),
   connectionId: text('connection_id'),
   lastHeartbeat: text('last_heartbeat'),
   joinedAt: text('joined_at').notNull(),

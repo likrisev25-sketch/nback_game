@@ -39,6 +39,9 @@ export const LobbyList: React.FC = () => {
     nValue: 1,
     baseSpeedMs: 2000,
     password: '',
+    addBot: false,
+    botAccuracy: 80,
+    botName: 'Бот',
   });
 
   // Загрузка списка лобби
@@ -86,6 +89,9 @@ export const LobbyList: React.FC = () => {
           baseSpeedMs: formData.baseSpeedMs,
           password: formData.password || undefined,
           userName: session.user.name || 'Игрок',
+          addBot: formData.addBot,
+          botAccuracy: formData.botAccuracy,
+          botName: formData.botName,
         }),
       });
 
@@ -349,6 +355,57 @@ export const LobbyList: React.FC = () => {
                   placeholder="Придумайте пароль"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              {/* Настройки бота */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                <div className="flex items-center gap-3 mb-3">
+                  <input
+                    type="checkbox"
+                    id="addBot"
+                    checked={formData.addBot}
+                    onChange={(e) => setFormData({ ...formData, addBot: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="addBot" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Добавить бота
+                  </label>
+                </div>
+
+                {formData.addBot && (
+                  <div className="space-y-3 ml-7">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Название бота
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.botName}
+                        onChange={(e) => setFormData({ ...formData, botName: e.target.value })}
+                        placeholder="Бот"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Точность бота: {formData.botAccuracy}%
+                      </label>
+                      <input
+                        type="range"
+                        min="50"
+                        max="100"
+                        value={formData.botAccuracy}
+                        onChange={(e) => setFormData({ ...formData, botAccuracy: Number(e.target.value) })}
+                        className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span>50%</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
