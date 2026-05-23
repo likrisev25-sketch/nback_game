@@ -164,3 +164,42 @@ export const lobbyPlayers = pgTable('lobby_players', {
 }, (table) => ({
   uniquePlayerIdx: uniqueIndex('unique_lobby_player_idx').on(table.lobbyId, table.userId),
 }));
+
+// ============================================
+// TOURNAMENT TABLES (Online Tournament System)
+// ============================================
+
+// Таблица турниров
+export const tournaments = pgTable('tournaments', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  nValue: integer('n_value').notNull().default(2),
+  totalSteps: integer('total_steps').notNull().default(30),
+  baseSpeedMs: integer('base_speed_ms').notNull().default(2000),
+  maxRounds: integer('max_rounds').notNull().default(5),
+  currentRound: integer('current_round').notNull().default(1),
+  status: text('status').notNull().default('waiting'),
+  minPlayers: integer('min_players').notNull().default(2),
+  maxPlayers: integer('max_players').notNull().default(2),
+  currentPlayers: integer('current_players').notNull().default(0),
+  hostId: text('host_id').notNull(),
+  password: text('password'),
+  createdAt: text('created_at').notNull(),
+  startedAt: text('started_at'),
+  finishedAt: text('finished_at'),
+});
+
+// Таблица игроков в турнире
+export const tournamentPlayers = pgTable('tournament_players', {
+  id: text('id').primaryKey(),
+  tournamentId: text('tournament_id')
+    .notNull()
+    .references(() => tournaments.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  isReady: boolean('is_ready').notNull().default(false),
+  isHost: boolean('is_host').notNull().default(false),
+  joinedAt: text('joined_at').notNull(),
+}, (table) => ({
+  uniquePlayerIdx: uniqueIndex('unique_tournament_player_idx').on(table.tournamentId, table.userId),
+}));

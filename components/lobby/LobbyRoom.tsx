@@ -5,6 +5,7 @@ import { useLobby } from '@/contexts/LobbyContext';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { Lobby, LobbyPlayer } from '@/types/lobby';
+import { GameRoom } from '@/components/game/GameRoom';
 
 interface LobbyRoomProps {
   lobbyId: string;
@@ -27,15 +28,15 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showStartModal, setShowStartModal] = useState(false);
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentLobby && !isLoading) {
-      // Лобби не найдено, возвращаемся назад
       router.push('/lobbies');
     }
   }, [currentLobby, isLoading, router]);
 
-  // Проверка для автозапуска
   useEffect(() => {
     if (!currentLobby || currentLobby.status !== 'waiting' || !autoStartEnabled) return;
     
@@ -43,7 +44,6 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
     
     if (hasMinPlayers && allReady) {
-      // Достаточное количество игроков и все готовы - запускаем игру
       startGame(currentLobby.id);
     }
   }, [currentLobby?.id, currentLobby?.currentPlayers, currentLobby?.players, autoStartEnabled, startGame]);
@@ -51,7 +51,6 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
   const handleReady = async () => {
     if (!currentLobby) return;
     
-    // Получаем текущий статус (предполагаем что пользователь уже в лобби)
     const player = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
     if (!player) return;
 
@@ -73,7 +72,7 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     if (!currentLobby) return;
     const newAutoStart = !autoStartEnabled;
     setAutoStartEnabled(newAutoStart);
-    startGame(currentLobby.id); // Отправляем на сервер
+    startGame(currentLobby.id);
   };
 
   const handleLeave = async () => {
@@ -89,6 +88,16 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
       console.error('Error leaving lobby:', error);
       setLocalError('Не удалось покинуть лобби');
     }
+  };
+
+  const handleGameEnd = (correctAnswers: number, errors: number) => {
+    console.log('Игра окончена:', { correctAnswers, errors });
+    setGameStarted(false);
+    // Возвращаемся в лобби
+  };
+
+  const handleBackToLobby = () => {
+    setGameStarted(false);
   };
 
   if (isLoading) {
@@ -118,6 +127,22 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
             Вернуться к списку
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // Показываем игру если статус 'in_progress' или gameStarted
+  if (currentLobby.status === 'in_progress' || gameStarted) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <GameRoom
+          lobbyId={lobbyId}
+          nValue={currentLobby.nValue}
+          baseSpeedMs={currentLobby.baseSpeedMs}
+          totalSteps={30}
+          onGameEnd={handleGameEnd}
+          onBackToLobby={handleBackToLobby}
+        />
       </div>
     );
   }

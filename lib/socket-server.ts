@@ -3,7 +3,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
 import { db } from '@/db/db';
-import { lobbies, lobbyPlayers } from '@/db/schema';
+import { lobbies, lobbyPlayers, tournaments, tournamentPlayers } from '@/db/schema';
 import { eq, and, not, isNull } from 'drizzle-orm';
 import { eq as eqUser } from 'drizzle-orm';
 import { users } from '@/db/schema';
@@ -20,6 +20,7 @@ interface PlayerConnection {
 
 const playerConnections = new Map<string, PlayerConnection>(); // connectionId -> PlayerConnection
 const lobbyRooms = new Map<string, Set<string>>(); // lobbyId -> Set<connectionId>
+const tournamentRooms = new Map<string, Set<string>>(); // tournamentId -> Set<connectionId>
 
 // Heartbeat интервал для проверки активных игроков
 const HEARTBEAT_TIMEOUT = 30000; // 30 секунд
@@ -459,6 +460,196 @@ export function initSocket(server: HTTPServer): Server {
       }
     });
 
+    // ============================================
+    // TOURNAMENT EVENTS
+    // ============================================
+
+    // Присоединение к турниру
+    socket.on('tournament:join', async (data: { tournamentId: string; userId: string; name: string }) => {
+      try {
+        const { tournamentId, userId, name } = data;
+
+        // Проверяем существование турнира
+        const [tournament] = await db
+          .select()
+          .from(tournaments)
+          .where(eq(tournaments.id, tournamentId))
+          .limit(1);
+
+        if (!tournament) {
+          socket.emit('tournament:error', { message: 'Турнир не найден' });
+          return;
+        }
+
+        // Проверяем статус
+        if (tournament.status !== 'waiting') {
+          socket.emit('tournament:error', { message: 'Турнир уже начался или завершен' });
+          return;
+        }
+
+        // Проверяем количество игроков
+        const existingPlayers = await db
+          .select()
+          .from(tournamentPlayers)
+          .where(eq(tournamentPlayers.tournamentId, tournamentId));
+
+        if (existingPlayers.length >= tournament.maxPlayers) {
+          socket.emit('tournament:error', { message: 'Турнир заполнен' });
+          return;
+        }
+
+        // Проверяем не зарегистрирован ли уже игрок
+        const existingPlayer = await db
+          .select()
+          .from(tournamentPlayers)
+          .where(
+            and(
+              eq(tournamentPlayers.tournamentId, tournamentId),
+              eq(tournamentPlayers.userId, userId)
+            )
+          )
+          .limit(1);
+
+        if (existingPlayer.length === 0) {
+          // Добавляем игрока в турнир
+          const isHost = tournament.hostId === userId;
+          await db.insert(tournamentPlayers).values({
+            id: nanoid(),
+            tournamentId,
+            userId,
+            name,
+            isReady: false,
+            isHost,
+            joinedAt: new Date().toISOString(),
+          });
+
+          // Обновляем счетчик игроков (добавим поле currentPlayers если его нет)
+          await db
+            .update(tournaments)
+            .set({
+              currentPlayers: tournament.currentPlayers + 1,
+            })
+            .where(eq(tournaments.id, tournamentId));
+        }
+
+        // Присоединяемся к комнате турнира
+        socket.join(`tournament:${tournamentId}`);
+
+        // Добавляем в комнату
+        if (!tournamentRooms.has(tournamentId)) {
+          tournamentRooms.set(tournamentId, new Set());
+        }
+        tournamentRooms.get(tournamentId)!.add(socket.id);
+
+        // Получаем обновлённое состояние турнира
+        const updatedTournament = await getTournamentWithPlayers(tournamentId);
+        if (updatedTournament) {
+          socket.emit('tournament:update', { tournament: updatedTournament });
+          
+          // Уведомляем других игроков
+          socket.to(`tournament:${tournamentId}`).emit('tournament:player-joined', {
+            player: updatedTournament.players.find((p) => p.userId === userId),
+          });
+        }
+      } catch (error) {
+        console.error('[Socket] Error joining tournament:', error);
+        socket.emit('tournament:error', { message: 'Ошибка при присоединении к турниру' });
+      }
+    });
+
+    // Выход из турнира
+    socket.on('tournament:leave', async (data: { tournamentId: string; userId: string }) => {
+      try {
+        const { tournamentId, userId } = data;
+        await handleTournamentPlayerLeave(socket, tournamentId, userId);
+      } catch (error) {
+        console.error('[Socket] Error leaving tournament:', error);
+        socket.emit('tournament:error', { message: 'Ошибка при выходе из турнира' });
+      }
+    });
+
+    // Обновление статуса готовности
+    socket.on('tournament:ready', async (data: { tournamentId: string; userId: string; isReady: boolean }) => {
+      try {
+        const { tournamentId, userId, isReady } = data;
+
+        await db
+          .update(tournamentPlayers)
+          .set({ isReady })
+          .where(
+            and(
+              eq(tournamentPlayers.tournamentId, tournamentId),
+              eq(tournamentPlayers.userId, userId)
+            )
+          );
+
+        const updatedTournament = await getTournamentWithPlayers(tournamentId);
+        if (updatedTournament) {
+          io?.to(`tournament:${tournamentId}`).emit('tournament:player-ready', {
+            tournamentId,
+            playerId: userId,
+            isReady,
+          });
+
+          // Проверяем готовы ли все игроки
+          const allReady = updatedTournament.players.every((p) => p.isReady);
+          if (allReady && updatedTournament.status === 'waiting' && updatedTournament.currentPlayers >= updatedTournament.minPlayers) {
+            // Все готовы и достаточно игроков - запускаем обратный отсчет
+            startTournamentCountdown(socket, tournamentId, updatedTournament.hostId);
+          }
+        }
+      } catch (error) {
+        console.error('[Socket] Error updating tournament ready status:', error);
+      }
+    });
+
+    // Запуск турнира (только host)
+    socket.on('tournament:start', async (data: { tournamentId: string; hostId: string }) => {
+      try {
+        const { tournamentId, hostId } = data;
+
+        const [tournament] = await db
+          .select()
+          .from(tournaments)
+          .where(eq(tournaments.id, tournamentId))
+          .limit(1);
+
+        if (!tournament) {
+          socket.emit('tournament:error', { message: 'Турнир не найден' });
+          return;
+        }
+
+        if (tournament.hostId !== hostId) {
+          socket.emit('tournament:error', { message: 'Только хост может запустить турнир' });
+          return;
+        }
+
+        // Проверяем количество игроков
+        const players = await db
+          .select()
+          .from(tournamentPlayers)
+          .where(eq(tournamentPlayers.tournamentId, tournamentId));
+
+        if (players.length < tournament.minPlayers) {
+          socket.emit('tournament:error', { 
+            message: `Недостаточно игроков. Нужно минимум ${tournament.minPlayers}, сейчас ${players.length}`
+          });
+          return;
+        }
+
+        // Проверяем что все игроки готовы
+        const allReady = players.every((p) => p.isReady);
+        if (!allReady) {
+          socket.emit('tournament:error', { message: 'Не все игроки готовы' });
+          return;
+        }
+
+        startTournamentCountdown(socket, tournamentId, hostId);
+      } catch (error) {
+        console.error('[Socket] Error starting tournament:', error);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log(`🔴 [Socket] Client disconnected: ${socket.id}`);
       
@@ -682,4 +873,163 @@ function startInactivePlayerChecker() {
 
 export function getSocketServer(): SocketIOServer | null {
   return io;
+}
+
+// ============================================
+// TOURNAMENT HELPER FUNCTIONS
+// ============================================
+
+async function getTournamentWithPlayers(tournamentId: string): Promise<any | null> {
+  const [tournament] = await db
+    .select()
+    .from(tournaments)
+    .where(eq(tournaments.id, tournamentId))
+    .limit(1);
+
+  if (!tournament) return null;
+
+  const players = await db
+    .select()
+    .from(tournamentPlayers)
+    .where(eq(tournamentPlayers.tournamentId, tournamentId));
+
+  return {
+    ...tournament,
+    players,
+  };
+}
+
+async function handleTournamentPlayerLeave(socket: { id: string }, tournamentId: string, userId: string) {
+  const [player] = await db
+    .select()
+    .from(tournamentPlayers)
+    .where(
+      and(
+        eq(tournamentPlayers.tournamentId, tournamentId),
+        eq(tournamentPlayers.userId, userId)
+      )
+    )
+    .limit(1);
+
+  if (!player) return;
+
+  const [tournament] = await db
+    .select()
+    .from(tournaments)
+    .where(eq(tournaments.id, tournamentId))
+    .limit(1);
+
+  if (!tournament) return;
+
+  // Если хост вышел - передаем права
+  if (player.isHost) {
+    const otherPlayers = await db
+      .select()
+      .from(tournamentPlayers)
+      .where(
+        and(
+          eq(tournamentPlayers.tournamentId, tournamentId),
+          not(eq(tournamentPlayers.userId, userId))
+        )
+      )
+      .orderBy(tournamentPlayers.joinedAt)
+      .limit(1);
+
+    if (otherPlayers.length > 0) {
+      const newHost = otherPlayers[0];
+      await db
+        .update(tournamentPlayers)
+        .set({ isHost: true })
+        .where(eq(tournamentPlayers.id, newHost.id));
+
+      io?.to(`tournament:${tournamentId}`).emit('tournament:host-transferred', {
+        tournamentId,
+        newHostId: newHost.userId,
+      });
+    } else {
+      // Если больше никого нет - удаляем турнир
+      await db.delete(tournaments).where(eq(tournaments.id, tournamentId));
+      tournamentRooms.delete(tournamentId);
+      return;
+    }
+  }
+
+  // Удаляем игрока
+  await db
+    .delete(tournamentPlayers)
+    .where(
+      and(
+        eq(tournamentPlayers.tournamentId, tournamentId),
+        eq(tournamentPlayers.userId, userId)
+      )
+    );
+
+  await db
+    .update(tournaments)
+    .set({ currentPlayers: tournament.currentPlayers - 1 })
+    .where(eq(tournaments.id, tournamentId));
+
+  // Удаляем из комнаты
+  const room = tournamentRooms.get(tournamentId);
+  if (room) {
+    room.delete(socket.id);
+    if (room.size === 0) {
+      tournamentRooms.delete(tournamentId);
+    }
+  }
+
+  io?.to(`tournament:${tournamentId}`).emit('tournament:player-left', {
+    tournamentId,
+    playerId: userId,
+  });
+
+  const updatedTournament = await getTournamentWithPlayers(tournamentId);
+  if (updatedTournament) {
+    io?.to(`tournament:${tournamentId}`).emit('tournament:update', { tournament: updatedTournament });
+  }
+}
+
+function startTournamentCountdown(socket: { id: string }, tournamentId: string, hostId: string) {
+  let seconds = 5;
+
+  // Обновляем статус турнира
+  db.update(tournaments)
+    .set({ status: 'playing' })
+    .where(eq(tournaments.id, tournamentId))
+    .catch(console.error);
+
+  io?.to(`tournament:${tournamentId}`).emit('tournament:countdown', {
+    seconds,
+  });
+
+  const interval = setInterval(() => {
+    seconds--;
+
+    if (seconds > 0) {
+      io?.to(`tournament:${tournamentId}`).emit('tournament:countdown', {
+        seconds,
+      });
+    } else {
+      clearInterval(interval);
+      startTournamentGame(socket, tournamentId, hostId);
+    }
+  }, 1000);
+}
+
+async function startTournamentGame(socket: { id: string }, tournamentId: string, hostId: string) {
+  // Обновляем статус турнира
+  await db
+    .update(tournaments)
+    .set({ 
+      status: 'playing',
+      startedAt: new Date().toISOString(),
+    })
+    .where(eq(tournaments.id, tournamentId));
+
+  // Создаем игровую сессию для первого раунда
+  const sessionId = `tournament_${tournamentId}_round_1_${Date.now()}`;
+
+  io?.to(`tournament:${tournamentId}`).emit('tournament:start-game', {
+    sessionId,
+  });
 }

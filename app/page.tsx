@@ -332,12 +332,6 @@ export default function Home() {
           >
             🏋️ Тренировка
           </Link>
-          <Link
-            href="/tournament-info"
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full font-bold hover:from-orange-600 hover:to-orange-700 transition-all transform hover:scale-105 shadow-lg"
-          >
-            🏆 Турниры
-          </Link>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -348,7 +342,7 @@ export default function Home() {
             🎮 Начать игру
           </button>
           <button
-            onClick={() => router.push('/tournament-info')}
+            onClick={() => router.push('/tournaments')}
             className="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-full font-bold text-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105 shadow-xl"
           >
             🏆 Турниры
