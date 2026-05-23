@@ -446,7 +446,7 @@ export const LobbyList: React.FC = () => {
                       Начать игру сразу
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Я буду ждать остальных игроков вручную
+                      Перейти в лобби и начать игру вручную
                     </p>
                   </div>
                 </div>
@@ -465,26 +465,25 @@ export const LobbyList: React.FC = () => {
                       Включить автозапуск
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Игра начнется автоматически когда соберется минимум {formData.minPlayers} игроков и все нажмут «Готов»
+                      Игра начнётся автоматически когда все игроки нажмут «Готов»
                     </p>
                   </div>
                 </div>
               </button>
-            </div>
 
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => {
-                  setShowStartChoiceModal(false);
-                  setPendingLobbyId(null);
-                  if (pendingLobbyId) {
-                    router.push(`/lobby/${pendingLobbyId}`);
-                  }
-                }}
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
-              >
-                Или перейти в лобби без автозапуска
-              </button>
+              <div className="mt-6 text-center border-t pt-4">
+                <button
+                  onClick={() => {
+                    setShowStartChoiceModal(false);
+                    if (pendingLobbyId) {
+                      router.push(`/lobby/${pendingLobbyId}`);
+                    }
+                  }}
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
+                >
+                  Перейти в лобби без настроек
+                </button>
+              </div>
             </div>
           </div>
         </div>
