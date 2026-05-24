@@ -3,9 +3,8 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server } from 'socket.io';
 import { nanoid } from 'nanoid';
 import { db } from '@/db/db';
-import { lobbies, lobbyPlayers, tournaments, tournamentPlayers } from '@/db/schema';
+import { lobbies, lobbyPlayers, tournaments, tournamentPlayers, gameSessions, gamePlayers } from '@/db/schema';
 import { eq, and, not, isNull } from 'drizzle-orm';
-import { eq as eqUser } from 'drizzle-orm';
 import { users } from '@/db/schema';
 import { Lobby, LobbyPlayer, LobbySettings } from '@/types/lobby';
 
@@ -825,23 +824,77 @@ function startCountdown(socket: { id: string }, lobbyId: string, hostId: string)
 }
 
 async function startGame(socket: { id: string }, lobbyId: string, hostId: string) {
+  console.log('🎮 [Socket] Starting game for lobby:', lobbyId);
+
+  // Получаем лобби с игроками
+  const [lobby] = await db
+    .select()
+    .from(lobbies)
+    .where(eq(lobbies.id, lobbyId))
+    .limit(1);
+
+  if (!lobby) {
+    console.error('❌ [Socket] Lobby not found:', lobbyId);
+    return;
+  }
+
+  const players = await db
+    .select()
+    .from(lobbyPlayers)
+    .where(eq(lobbyPlayers.lobbyId, lobbyId));
+
+  // Создаем игровую сессию
+  const sessionId = nanoid();
+  const now = new Date().toISOString();
+
+  await db.insert(gameSessions).values({
+    id: sessionId,
+    name: lobby.name,
+    nValue: lobby.nValue,
+    baseSpeedMs: lobby.baseSpeedMs,
+    currentSpeedMs: lobby.baseSpeedMs,
+    maxPlayers: lobby.maxPlayers,
+    status: 'playing',
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  console.log('✅ [Socket] Created game session:', sessionId);
+
+  // Добавляем игроков в game_players
+  for (const player of players) {
+    await db.insert(gamePlayers).values({
+      id: nanoid(),
+      sessionId,
+      userId: player.userId,
+      name: player.name,
+      correctAnswers: 0,
+      errors: 0,
+      isBot: player.isBot || false,
+      botAccuracy: player.botAccuracy || 100,
+      isHost: player.isHost || false,
+      joinedAt: now,
+    });
+  }
+
+  console.log('✅ [Socket] Added players to game session');
+
   // Обновляем статус лобби
   await db
     .update(lobbies)
     .set({ 
       status: 'in_progress',
-      startedAt: new Date().toISOString(),
+      startedAt: now,
     })
     .where(eq(lobbies.id, lobbyId));
 
-  // TODO: Создать игровую сессию
-  // Пока используем заглушку
-  const sessionId = `session_${Date.now()}`;
-
+  // Отправляем всем игрокам sessionId
   io?.to(`lobby:${lobbyId}`).emit('lobby:start-game', {
     lobbyId,
     sessionId,
   });
+
+  console.log('✅ [Socket] Game started, sessionId:', sessionId);
 }
 
 function startInactivePlayerChecker() {

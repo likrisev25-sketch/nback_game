@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
+import { lobbies, lobbyPlayers } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 export async function POST(request: NextRequest) {
@@ -39,61 +41,89 @@ export async function POST(request: NextRequest) {
 
     console.log('🔵 [lobby/create] Creating lobby:', { lobbyId, userId, lobbyName });
 
-    // Простая вставка без drizzle
-    await db.execute(`
-      INSERT INTO lobbies (id, game_id, name, status, n_value, base_speed_ms, 
-        min_players, max_players, current_players, host_id, auto_start_enabled, 
-        created_at, started_at, finished_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-    `, [
-      lobbyId, gameId, lobbyName, 'waiting', nValue, baseSpeedMs,
-      minPlayers, maxPlayers, 1, userId, false,
-      new Date().toISOString(), null, null
-    ]);
+    const now = new Date().toISOString();
+
+    // Создаем лобби через drizzle
+    await db.insert(lobbies).values({
+      id: lobbyId,
+      gameId,
+      name: lobbyName,
+      status: 'waiting',
+      nValue,
+      baseSpeedMs,
+      minPlayers,
+      maxPlayers,
+      currentPlayers: 1 + (addBot ? 1 : 0),
+      hostId: userId,
+      password: password || null,
+      autoStartEnabled: false,
+      createdAt: now,
+      startedAt: null,
+      finishedAt: null,
+    });
     
     console.log('✅ [lobby/create] Lobby inserted');
 
     // Добавляем игрока
-    await db.execute(`
-      INSERT INTO lobby_players (id, lobby_id, user_id, name, is_ready, is_host, 
-        is_bot, bot_accuracy, joined_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `, [
-      nanoid(), lobbyId, userId, userName, false, true, false, 100, new Date().toISOString()
-    ]);
+    await db.insert(lobbyPlayers).values({
+      id: nanoid(),
+      lobbyId,
+      userId,
+      name: userName,
+      isReady: false,
+      isHost: true,
+      isBot: false,
+      botAccuracy: 100,
+      joinedAt: now,
+    });
     
     console.log('✅ [lobby/create] Player inserted');
 
+    // Добавляем бота если запрошено
     if (addBot) {
-      await db.execute(`
-        INSERT INTO lobby_players (id, lobby_id, user_id, name, is_ready, is_host, 
-          is_bot, bot_accuracy, joined_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      `, [
-        nanoid(), lobbyId, nanoid(), `${botName} (${botAccuracy}%)`, true, false, true, botAccuracy, new Date().toISOString()
-      ]);
+      await db.insert(lobbyPlayers).values({
+        id: nanoid(),
+        lobbyId,
+        userId: `bot_${nanoid()}`,
+        name: `${botName} (${botAccuracy}%)`,
+        isReady: true,
+        isHost: false,
+        isBot: true,
+        botAccuracy,
+        joinedAt: now,
+      });
       console.log('✅ [lobby/create] Bot added');
     }
 
     console.log('✅ [lobby/create] Lobby created successfully:', lobbyId);
 
+    // Получаем созданное лобби с игроками
+    const [createdLobby] = await db
+      .select()
+      .from(lobbies)
+      .where(eq(lobbies.id, lobbyId))
+      .limit(1);
+
+    const players = await db
+      .select()
+      .from(lobbyPlayers)
+      .where(eq(lobbyPlayers.lobbyId, lobbyId));
+
     return NextResponse.json({
       success: true,
       lobby: {
-        id: lobbyId,
-        name: lobbyName,
-        status: 'waiting',
-        nValue,
-        baseSpeedMs,
-        minPlayers,
-        maxPlayers,
-        currentPlayers: 1 + (addBot ? 1 : 0),
-        hostId: userId,
-        players: [
-          { id: userId, userId, name: userName, isReady: false, isHost: true, isBot: false },
-          ...(addBot ? [{ id: 'bot', userId: 'bot', name: `${botName} (${botAccuracy}%)`, isReady: true, isHost: false, isBot: true }] : [])
-        ]
-      }
+        ...createdLobby,
+        players: players.map(p => ({
+          id: p.userId,
+          userId: p.userId,
+          name: p.name,
+          isReady: Boolean(p.isReady),
+          isHost: Boolean(p.isHost),
+          isBot: Boolean(p.isBot),
+          botAccuracy: p.botAccuracy,
+          joinedAt: p.joinedAt,
+        })),
+      },
     });
   } catch (error) {
     console.error('❌ [lobby/create] Error:', error);
