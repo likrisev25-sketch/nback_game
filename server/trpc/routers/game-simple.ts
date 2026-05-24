@@ -15,40 +15,52 @@ export const gameRouter = router({
       totalSteps: z.number().min(10).max(100),
       baseSpeedMs: z.number().min(500).max(5000),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      console.log('🔵 [gameSimple.createSession] Creating session with input:', input);
       const sessionId = nanoid();
       const userId = 'user_' + nanoid();
       const playerName = getUserName();
       
+      console.log('🔵 [gameSimple.createSession] Generated sessionId:', sessionId, 'playerName:', playerName);
+      
       const now = new Date().toISOString();
       
-      await db.insert(gameSessions).values({
-        id: sessionId,
-        name: input.name || 'Без названия',
-        nValue: input.nValue,
-        baseSpeedMs: input.baseSpeedMs,
-        currentSpeedMs: input.baseSpeedMs,
-        maxPlayers: 4,
-        status: 'waiting',
-        createdAt: now,
-        updatedAt: now,
-      });
-      
-      // Добавляем создателя как первого игрока
-      await db.insert(gamePlayers).values({
-        id: nanoid(),
-        sessionId: sessionId,
-        userId: userId,
-        name: playerName,
-        correctAnswers: 0,
-        errors: 0,
-        isBot: false,
-        botAccuracy: 100,
-        isHost: true,
-        joinedAt: now,
-      });
-      
-      return { sessionId, name: input.name };
+      try {
+        await db.insert(gameSessions).values({
+          id: sessionId,
+          name: input.name || 'Без названия',
+          nValue: input.nValue,
+          baseSpeedMs: input.baseSpeedMs,
+          currentSpeedMs: input.baseSpeedMs,
+          maxPlayers: 4,
+          status: 'waiting',
+          createdAt: now,
+          updatedAt: now,
+        });
+        
+        console.log('✅ [gameSimple.createSession] Session inserted');
+        
+        // Добавляем создателя как первого игрока
+        await db.insert(gamePlayers).values({
+          id: nanoid(),
+          sessionId: sessionId,
+          userId: userId,
+          name: playerName,
+          correctAnswers: 0,
+          errors: 0,
+          isBot: false,
+          botAccuracy: 100,
+          isHost: true,
+          joinedAt: now,
+        });
+        
+        console.log('✅ [gameSimple.createSession] Player inserted');
+        
+        return { sessionId, name: input.name };
+      } catch (error) {
+        console.error('❌ [gameSimple.createSession] Error:', error);
+        throw error;
+      }
     }),
   
   // Присоединение к сессии
@@ -107,15 +119,22 @@ export const gameRouter = router({
   
   // Получить список сессий
   listSessions: publicProcedure
-    .query(async () => {
-      const sessions = await db.query.gameSessions.findMany({
-        where: eq(gameSessions.status, 'waiting'),
-        with: {
-          players: true
-        },
-        orderBy: desc(gameSessions.createdAt)
-      });
-      return sessions;
+    .query(async ({ ctx }) => {
+      console.log('🔵 [gameSimple.listSessions] Query started');
+      try {
+        const sessions = await db.query.gameSessions.findMany({
+          where: eq(gameSessions.status, 'waiting'),
+          with: {
+            players: true
+          },
+          orderBy: desc(gameSessions.createdAt)
+        });
+        console.log('📊 [gameSimple.listSessions] Found sessions:', sessions?.length || 0);
+        return sessions;
+      } catch (error) {
+        console.error('❌ [gameSimple.listSessions] Error:', error);
+        throw error;
+      }
     }),
   
   // Начать игру
