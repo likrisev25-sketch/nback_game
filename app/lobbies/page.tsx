@@ -31,7 +31,7 @@ export default function LobbiesPage() {
   }
 
   // Пока редиректим
-  if (!session) {
+  if (!session || !session.user) {
     return null;
   }
 

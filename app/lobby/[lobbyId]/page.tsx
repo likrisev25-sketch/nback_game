@@ -70,6 +70,11 @@ export default function LobbyPage() {
     return null;
   }
 
+  // Пока редиректим
+  if (!session || !session.user) {
+    return null;
+  }
+
   return (
     <LobbyProvider
       userId={session.user.id}
