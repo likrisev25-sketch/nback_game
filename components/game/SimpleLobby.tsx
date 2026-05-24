@@ -35,17 +35,20 @@ export function SimpleLobby() {
     { sessionId },
     { 
       enabled: !!sessionId && !showCreate, 
-      refetchInterval: 2000,
-      onSuccess: (data) => {
-        // Сохраняем playerId текущего игрока
-        const currentPlayer = data?.players?.find(p => p.name === userName);
-        if (currentPlayer) {
-          setPlayerId(currentPlayer.id);
-          setNValue(data.nValue || 2);
-        }
-      }
+      refetchInterval: 2000
     }
   );
+  
+  // Сохраняем playerId текущего игрока при обновлении данных сессии
+  useEffect(() => {
+    if (sessionData.data) {
+      const currentPlayer = sessionData.data.players?.find(p => p.name === userName);
+      if (currentPlayer) {
+        setPlayerId(currentPlayer.id);
+        setNValue(sessionData.data.nValue || 2);
+      }
+    }
+  }, [sessionData.data, userName, setPlayerId, setNValue]);
   
   const listSessions = trpc.gameSimple.listSessions.useQuery(undefined, {
     refetchInterval: 3000
@@ -125,9 +128,9 @@ export function SimpleLobby() {
                   baseSpeedMs: 1500
                 })}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-400"
-                disabled={createSession.isLoading}
+                disabled={createSession.isPending}
               >
-                {createSession.isLoading ? 'Создание...' : '🎮 Создать лобби'}
+                {createSession.isPending ? 'Создание...' : '🎮 Создать лобби'}
               </button>
             </div>
             
