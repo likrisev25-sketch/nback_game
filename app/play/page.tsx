@@ -108,7 +108,6 @@ export default function PlayPage() {
     // Показываем позицию
     const position = sequence[currentStep];
     setActivePosition(position);
-    setCurrentStep(prev => prev);
     hasAnsweredRef.current = false;
     setShowMatchButton(true);
     
@@ -125,7 +124,7 @@ export default function PlayPage() {
         runGameLoop();
       }, 500);
     }, baseSpeedMs);
-  }, [currentStep, totalSteps, sequence, baseSpeedMs, addBot, botAccuracy, handleBotAnswer]);
+  }, [currentStep, totalSteps, sequence, baseSpeedMs, handleBotAnswer]);
 
   // Запуск игры
   const startGame = () => {
