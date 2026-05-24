@@ -21,15 +21,27 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     leaveLobby,
     setReady,
     startGame,
+    refreshLobby,
   } = useLobby();
   
   const router = useRouter();
   const [localError, setLocalError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [showStartModal, setShowStartModal] = useState(false);
-  const [autoStartEnabled, setAutoStartEnabled] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+
+  // Загружаем лобби при монтировании
+  useEffect(() => {
+    if (lobbyId) {
+      refreshLobby(lobbyId);
+      
+      // Polling для обновления статуса
+      const interval = setInterval(() => {
+        refreshLobby(lobbyId);
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }
+  }, [lobbyId, refreshLobby]);
 
   useEffect(() => {
     if (!currentLobby && !isLoading) {
@@ -37,52 +49,21 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     }
   }, [currentLobby, isLoading, router]);
 
-  useEffect(() => {
-    if (!currentLobby || currentLobby.status !== 'waiting' || !autoStartEnabled) return;
-    
-    const hasMinPlayers = currentLobby.currentPlayers >= currentLobby.minPlayers;
-    const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
-    
-    if (hasMinPlayers && allReady) {
-      startGame(currentLobby.id);
-    }
-  }, [currentLobby?.id, currentLobby?.currentPlayers, currentLobby?.players, autoStartEnabled, startGame]);
-
   const handleReady = async () => {
-    if (!currentLobby) return;
+    if (!currentLobby || !session?.user) return;
     
-    const player = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
+    const player = currentLobby.players.find((p: LobbyPlayer) => p.userId === session.user.id);
     if (!player) return;
 
-    setReady(currentLobby.id, !player.isReady);
-  };
-
-  const handleStart = () => {
-    if (!currentLobby) return;
-    setShowStartModal(true);
-  };
-
-  const confirmStartGame = () => {
-    if (!currentLobby) return;
-    setShowStartModal(false);
-    startGame(currentLobby.id);
-  };
-
-  const toggleAutoStart = () => {
-    if (!currentLobby) return;
-    const newAutoStart = !autoStartEnabled;
-    setAutoStartEnabled(newAutoStart);
-    startGame(currentLobby.id);
+    await setReady(currentLobby.id, session.user.id, !player.isReady);
+    refreshLobby(currentLobby.id);
   };
 
   const handleLeave = async () => {
-    if (!currentLobby) return;
+    if (!currentLobby || !session?.user) return;
     
     try {
-      await fetch(`/api/lobby/${lobbyId}/leave`, {
-        method: 'POST',
-      });
-      leaveLobby(lobbyId);
+      await leaveLobby(currentLobby.id, session.user.id);
       router.push('/lobbies');
     } catch (error) {
       console.error('Error leaving lobby:', error);
@@ -93,11 +74,12 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
   const handleGameEnd = (correctAnswers: number, errors: number) => {
     console.log('Игра окончена:', { correctAnswers, errors });
     setGameStarted(false);
-    // Возвращаемся в лобби
+    refreshLobby(lobbyId);
   };
 
   const handleBackToLobby = () => {
     setGameStarted(false);
+    refreshLobby(lobbyId);
   };
 
   if (isLoading) {
@@ -152,7 +134,7 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
   );
   
   const myPlayer = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
-  const isReady = myPlayer?.isReady || false;
+  const isReadyState = myPlayer?.isReady || false;
   const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
 
   return (
@@ -184,72 +166,11 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
           <button
             onClick={() => {
               setLocalError(null);
-              // error из контекста очищается автоматически
             }}
             className="float-right text-lg font-bold"
           >
             ×
           </button>
-        </div>
-      )}
-
-      {/* Модальное окно подтверждения запуска */}
-      {showStartModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-              Начать игру?
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Вы уверены, что хотите начать игру? Вы можете подождать других игроков или включить автозапуск при достижении минимального количества игроков.
-            </p>
-            
-            <div className="space-y-4 mb-6">
-              <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={autoStartEnabled}
-                  onChange={() => setAutoStartEnabled(!autoStartEnabled)}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <p className="font-semibold text-gray-800 dark:text-white">
-                    Автозапуск при достижении минимума
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Игра начнется автоматически когда соберется минимум {currentLobby.minPlayers} игроков и все нажмут «Готов»
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowStartModal(false)}
-                className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={confirmStartGame}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-              >
-                Начать игру
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Countdown */}
-      {currentLobby.status === 'countdown' && (
-        <div className="mb-8 text-center py-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-          <p className="text-6xl font-bold text-blue-600 dark:text-blue-400">
-            {countdown || 5}
-          </p>
-          <p className="text-xl text-blue-700 dark:text-blue-300 mt-2">
-            Игра начинается!
-          </p>
         </div>
       )}
 
@@ -305,37 +226,25 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
             onClick={handleReady}
             disabled={currentLobby.status !== 'waiting'}
             className={`flex-1 py-4 rounded-lg font-semibold text-lg transition-colors ${
-              isReady
+              isReadyState
                 ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                 : 'bg-green-600 hover:bg-green-700 text-white'
             } disabled:bg-gray-400 disabled:cursor-not-allowed`}
           >
-            {isReady ? 'Не готов' : 'Готов'}
+            {isReadyState ? 'Не готов' : 'Готов'}
           </button>
 
           {isHost && (
-            <>
-              <button
-                onClick={handleStart}
-                disabled={currentLobby.status !== 'waiting'}
-                className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                🚀 Начать игру
-              </button>
-
-              {/* Кнопка автозапуска */}
-              <button
-                onClick={toggleAutoStart}
-                className={`px-6 py-4 rounded-lg font-semibold text-lg transition-colors ${
-                  autoStartEnabled
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-                title="Автозапуск при достижении минимального количества игроков"
-              >
-                {autoStartEnabled ? '✓ Автозапуск' : '⚡ Автозапуск'}
-              </button>
-            </>
+            <button
+              onClick={async () => {
+                if (!session?.user) return;
+                await startGame(currentLobby.id, session.user.id);
+              }}
+              disabled={currentLobby.status !== 'waiting'}
+              className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              🚀 Начать игру
+            </button>
           )}
 
           <button
@@ -357,18 +266,6 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
       {currentLobby.status === 'waiting' && allReady && isHost && currentLobby.currentPlayers >= currentLobby.minPlayers && (
         <p className="mt-4 text-center text-green-600 dark:text-green-400 font-semibold">
           Все игроки готовы! Нажмите «Начать игру»
-        </p>
-      )}
-
-      {currentLobby.status === 'waiting' && !allReady && currentLobby.currentPlayers < currentLobby.minPlayers && (
-        <p className="mt-4 text-center text-orange-600 dark:text-orange-400 font-semibold">
-          Ожидание игроков... Нужно минимум {currentLobby.minPlayers}, сейчас {currentLobby.currentPlayers}
-        </p>
-      )}
-
-      {autoStartEnabled && currentLobby.status === 'waiting' && (
-        <p className="mt-4 text-center text-purple-600 dark:text-purple-400 font-semibold">
-          ✓ Автозапуск включен. Игра начнется когда соберется минимум {currentLobby.minPlayers} игроков и все нажмут «Готов»
         </p>
       )}
     </div>

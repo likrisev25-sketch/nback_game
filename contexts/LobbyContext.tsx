@@ -1,29 +1,26 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Lobby, LobbyPlayer, LobbySettings } from '@/types/lobby';
 
 interface LobbyContextType {
   // Состояние
-  socket: Socket | null;
   currentLobby: Lobby | null;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
 
-  // Методы
+  // Методы (теперь REST API)
   connect: () => void;
   disconnect: () => void;
-  joinLobby: (lobbyId: string, userId: string, name: string) => void;
-  leaveLobby: (lobbyId: string) => void;
-  setReady: (lobbyId: string, isReady: boolean) => void;
-  startGame: (lobbyId: string) => void;
-  toggleAutoStart: (lobbyId: string) => void;
-  updateSettings: (lobbyId: string, settings: LobbySettings) => void;
-  kickPlayer: (lobbyId: string, playerId: string) => void;
-  sendHeartbeat: (lobbyId: string) => void;
-  sendMessage: (lobbyId: string, message: string) => void;
+  joinLobby: (lobbyId: string, userId: string, name: string) => Promise<void>;
+  leaveLobby: (lobbyId: string, userId: string) => Promise<void>;
+  setReady: (lobbyId: string, userId: string, isReady: boolean) => Promise<void>;
+  startGame: (lobbyId: string, hostId: string) => Promise<void>;
+  toggleAutoStart: (lobbyId: string, hostId: string) => Promise<void>;
+  updateSettings: (lobbyId: string, settings: LobbySettings) => Promise<void>;
+  kickPlayer: (lobbyId: string, hostId: string, playerId: string) => Promise<void>;
+  refreshLobby: (lobbyId: string) => Promise<void>;
 }
 
 const LobbyContext = createContext<LobbyContextType | undefined>(undefined);
@@ -47,220 +44,201 @@ export const LobbyProvider: React.FC<LobbyProviderProps> = ({
   userId, 
   userName 
 }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [currentLobby, setCurrentLobby] = useState<Lobby | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Инициализация Socket.IO
-  useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const connect = useCallback(() => {
+    setIsConnected(true);
+    setError(null);
+  }, []);
     
-    const newSocket = io(socketUrl, {
-      path: '/api/socket',
-      withCredentials: true,
-    });
-
-    newSocket.on('connect', () => {
-      console.log('✅ [Socket] Connected to server');
-      setIsConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('🔴 [Socket] Disconnected from server');
-      setIsConnected(false);
-    });
-
-    newSocket.on('connect_error', (err) => {
-      console.error('❌ [Socket] Connection error:', err);
-      setError('Не удалось подключиться к серверу');
-    });
-
-    // Обработчики событий лобби
-    newSocket.on('lobby:update', (data: { lobby: Lobby }) => {
-      setCurrentLobby(data.lobby);
-    });
-
-    newSocket.on('lobby:player-joined', (data: { lobbyId: string; player: LobbyPlayer }) => {
-      console.log('👤 [Lobby] Player joined:', data.player.name);
-      setCurrentLobby((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          players: [...prev.players, data.player],
-          currentPlayers: prev.currentPlayers + 1,
-        };
-      });
-    });
-
-    newSocket.on('lobby:player-left', (data: { lobbyId: string; playerId: string }) => {
-      console.log('🚪 [Lobby] Player left');
-      setCurrentLobby((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          players: prev.players.filter((p) => p.userId !== data.playerId),
-          currentPlayers: Math.max(0, prev.currentPlayers - 1),
-        };
-      });
-    });
-
-    newSocket.on('lobby:player-ready', (data: { lobbyId: string; playerId: string; isReady: boolean }) => {
-      setCurrentLobby((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          players: prev.players.map((p) =>
-            p.userId === data.playerId ? { ...p, isReady: data.isReady } : p
-          ),
-        };
-      });
-    });
-
-    newSocket.on('lobby:countdown', (data: { lobbyId: string; seconds: number }) => {
-      console.log('⏱️ [Lobby] Countdown:', data.seconds);
-      // Можно добавить визуальное отображение countdown
-    });
-
-    newSocket.on('lobby:start-game', (data: { lobbyId: string; sessionId: string }) => {
-      console.log('🎮 [Lobby] Game starting:', data.sessionId);
-      // Перенаправление на страницу игры
-      window.location.href = `/game/${data.sessionId}`;
-    });
-
-    newSocket.on('lobby:auto-start-toggled', (data: { lobbyId: string; enabled: boolean }) => {
-      console.log('⚡ [Lobby] Auto-start toggled:', data.enabled);
-      setCurrentLobby((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          autoStartEnabled: data.enabled,
-        };
-      });
-    });
-
-    newSocket.on('lobby:host-transferred', (data: { lobbyId: string; newHostId: string }) => {
-      console.log('👑 [Lobby] New host:', data.newHostId);
-      setCurrentLobby((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          players: prev.players.map((p) => ({
-            ...p,
-            isHost: p.userId === data.newHostId,
-          })),
-          hostId: data.newHostId,
-        };
-      });
-    });
-
-    newSocket.on('lobby:error', (data: { message: string; code?: string }) => {
-      console.error('❌ [Lobby] Error:', data.message);
-      setError(data.message);
-      setTimeout(() => setError(null), 5000);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.close();
-    };
+  const disconnect = useCallback(() => {
+    setIsConnected(false);
+    setCurrentLobby(null);
   }, []);
 
-  const connect = useCallback(() => {
-    if (socket && !socket.connected) {
-      socket.connect();
-    }
-  }, [socket]);
-
-  const disconnect = useCallback(() => {
-    if (socket) {
-      socket.disconnect();
-    }
-  }, [socket]);
-
-  const joinLobby = useCallback((lobbyId: string, userId: string, name: string) => {
-    if (!socket) {
-      console.error('❌ Socket not initialized');
-      return;
-    }
-    
+  const joinLobby = useCallback(async (lobbyId: string, userId: string, name: string) => {
     setIsLoading(true);
     setError(null);
     
-    socket.emit('lobby:join', { lobbyId, userId, name });
-    
-    // Таймаут если не получили ответ
-    setTimeout(() => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, name }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join lobby');
+      }
+
+      setCurrentLobby(data.lobby);
+      setIsConnected(true);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to join lobby';
+      setError(errorMessage);
+      console.error('Error joining lobby:', err);
+    } finally {
       setIsLoading(false);
-    }, 5000);
-  }, [socket]);
+    }
+  }, []);
 
-  const leaveLobby = useCallback((lobbyId: string) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:leave', { lobbyId, userId: userId || '' });
-    setCurrentLobby(null);
-  }, [socket, userId]);
+  const leaveLobby = useCallback(async (lobbyId: string, userId: string) => {
+    try {
+      await fetch(`/api/lobby/${lobbyId}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      setCurrentLobby(null);
+      setIsConnected(false);
+    } catch (error) {
+      console.error('Error leaving lobby:', error);
+    }
+  }, []);
 
-  const setReady = useCallback((lobbyId: string, isReady: boolean) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:ready', { lobbyId, userId: userId || '', isReady });
-  }, [socket, userId]);
+  const setReady = useCallback(async (lobbyId: string, userId: string, isReady: boolean) => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}/ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, isReady }),
+      });
 
-  const startGame = useCallback((lobbyId: string) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:start', { lobbyId, hostId: userId || '' });
-  }, [socket, userId]);
+      const data = await response.json();
 
-  const toggleAutoStart = useCallback((lobbyId: string) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:toggle-auto-start', { lobbyId, hostId: userId || '' });
-  }, [socket, userId]);
+      if (data.success) {
+        // Обновляем локальное состояние
+        setCurrentLobby(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            players: prev.players.map(p =>
+              p.userId === userId ? { ...p, isReady } : p
+            ),
+          };
+        });
+      } else {
+        throw new Error(data.error || 'Failed to update ready status');
+      }
+    } catch (error) {
+      console.error('Error setting ready:', error);
+    }
+  }, []);
 
-  const updateSettings = useCallback((lobbyId: string, settings: LobbySettings) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:settings', { lobbyId, hostId: userId || '', settings });
-  }, [socket, userId]);
+  const startGame = useCallback(async (lobbyId: string, hostId: string) => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostId }),
+      });
 
-  const kickPlayer = useCallback((lobbyId: string, playerId: string) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:kick', { lobbyId, hostId: userId || '', playerId });
-  }, [socket, userId]);
+      const data = await response.json();
 
-  const sendHeartbeat = useCallback((lobbyId: string) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:heartbeat', { lobbyId, userId: userId || '' });
-  }, [socket, userId]);
+      if (data.success) {
+        // Перенаправляем на страницу игры
+        window.location.href = `/game/${data.sessionId}`;
+      } else {
+        throw new Error(data.error || 'Failed to start game');
+      }
+    } catch (error) {
+      console.error('Error starting game:', error);
+      setError(error instanceof Error ? error.message : 'Failed to start game');
+    }
+  }, []);
 
-  const sendMessage = useCallback((lobbyId: string, message: string) => {
-    if (!socket) return;
-    
-    socket.emit('lobby:chat', { lobbyId, userId: userId || '', message });
-  }, [socket, userId]);
+  const toggleAutoStart = useCallback(async (lobbyId: string, hostId: string) => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}/auto-start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostId }),
+      });
 
-  // Автоматический heartbeat каждые 15 секунд
-  useEffect(() => {
-    if (!socket || !currentLobby) return;
+      const data = await response.json();
 
-    const interval = setInterval(() => {
-      sendHeartbeat(currentLobby.id);
-    }, 15000);
+      if (data.success) {
+        setCurrentLobby(prev => {
+          if (!prev) return prev;
+          return { ...prev, autoStartEnabled: data.autoStartEnabled };
+        });
+      } else {
+        throw new Error(data.error || 'Failed to toggle auto-start');
+      }
+    } catch (error) {
+      console.error('Error toggling auto-start:', error);
+    }
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [socket, currentLobby, sendHeartbeat]);
+  const updateSettings = useCallback(async (lobbyId: string, settings: LobbySettings) => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update settings');
+      }
+
+      setCurrentLobby(prev => prev ? { ...prev, ...settings } : null);
+    } catch (error) {
+      console.error('Error updating settings:', error);
+    }
+  }, []);
+
+  const kickPlayer = useCallback(async (lobbyId: string, hostId: string, playerId: string) => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}/kick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostId, playerId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to kick player');
+      }
+
+      // Обновляем список игроков
+      setCurrentLobby(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          players: prev.players.filter(p => p.userId !== playerId),
+          currentPlayers: prev.currentPlayers - 1,
+        };
+      });
+    } catch (error) {
+      console.error('Error kicking player:', error);
+    }
+  }, []);
+
+  const refreshLobby = useCallback(async (lobbyId: string) => {
+    try {
+      const response = await fetch(`/api/lobby/${lobbyId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCurrentLobby(data.lobby);
+      }
+    } catch (error) {
+      console.error('Error refreshing lobby:', error);
+    }
+  }, []);
 
   return (
     <LobbyContext.Provider
       value={{
-        socket,
         currentLobby,
         isConnected,
         isLoading,
@@ -274,8 +252,7 @@ export const LobbyProvider: React.FC<LobbyProviderProps> = ({
         toggleAutoStart,
         updateSettings,
         kickPlayer,
-        sendHeartbeat,
-        sendMessage,
+        refreshLobby,
       }}
     >
       {children}

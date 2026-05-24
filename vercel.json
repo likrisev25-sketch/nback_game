@@ -1,18 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
+  "rewrites": [
+    { "source": "/api/socket", "destination": "/api/socket" }
   ],
   "env": {
     "NEXT_PUBLIC_APP_URL": "https://nback-game-wheat.vercel.app"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "postgresql://neondb_owner:npg_maLF3De0sYWp@ep-still-recipe-alzzxt46-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
-      "BETTER_AUTH_SECRET": "S+ce5uHnXbpH/JTKJK8LJJ4MQvfsCXIyGSGpQuBvA2Y="
-    }
   }
 }
