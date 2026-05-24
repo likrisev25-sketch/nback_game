@@ -16,11 +16,15 @@ export function SimpleLobby() {
   
   const createSession = trpc.gameSimple.createSession.useMutation({
     onSuccess: (data) => {
+      console.log('✅ Сессия создана:', data);
       alert(`Сессия создана! ID: ${data.sessionId}`);
       setSessionId(data.sessionId);
       setShowCreate(false);
     },
-    onError: (error) => alert(`Ошибка: ${error.message}`)
+    onError: (error) => {
+      console.error('❌ Ошибка создания сессии:', error);
+      alert(`Ошибка: ${error.message}`);
+    }
   });
   
   const joinSession = trpc.gameSimple.joinSession.useMutation({
@@ -121,12 +125,16 @@ export function SimpleLobby() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
               />
               <button
-                onClick={() => createSession.mutate({
-                  name: gameName,
-                  nValue: 2,
-                  totalSteps: 30,
-                  baseSpeedMs: 1500
-                })}
+                onClick={() => {
+                  console.log('🔵 Кнопка "Создать лобби" нажата');
+                  console.log('🔵 gameName:', gameName);
+                  createSession.mutate({
+                    name: gameName,
+                    nValue: 2,
+                    totalSteps: 30,
+                    baseSpeedMs: 1500
+                  });
+                }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-400"
                 disabled={createSession.isPending}
               >
