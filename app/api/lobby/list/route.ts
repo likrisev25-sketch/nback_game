@@ -6,12 +6,19 @@ import { eq, desc } from 'drizzle-orm';
 export async function GET(request: NextRequest) {
   try {
     console.log('🔵 [lobby/list] GET request received');
+    console.log('🔵 [lobby/list] DATABASE_URL exists:', !!process.env.DATABASE_URL);
+    console.log('🔵 [lobby/list] db object exists:', !!db);
     
     if (!db) {
       console.error('❌ [lobby/list] Database not available');
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Database not available. Please check DATABASE_URL environment variable on Vercel.',
+        details: 'db is null/undefined'
+      }, { status: 500 });
     }
 
+    console.log('🔵 [lobby/list] Attempting to query lobbies table...');
+    
     // Получаем список активных лобби
     const allLobbies = await db
       .select()
@@ -19,7 +26,7 @@ export async function GET(request: NextRequest) {
       .where(eq(lobbies.status, 'waiting'))
       .orderBy(desc(lobbies.createdAt));
 
-    console.log('🔵 [lobby/list] Found lobbies:', allLobbies.length);
+    console.log('✅ [lobby/list] Found lobbies:', allLobbies.length);
 
     // Получаем игроков для каждого лобби
     const lobbiesWithPlayers = await Promise.all(
@@ -50,6 +57,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, lobbies: lobbiesWithPlayers });
   } catch (error) {
     console.error('❌ [lobby/list] Error listing lobbies:', error);
-    return NextResponse.json({ error: 'Failed to list lobbies' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack';
+    
+    console.error('❌ [lobby/list] Error message:', errorMessage);
+    console.error('❌ [lobby/list] Error stack:', errorStack);
+    
+    return NextResponse.json({ 
+      error: 'Failed to list lobbies',
+      details: errorMessage,
+      stack: errorStack.substring(0, 500) // Ограничиваем длину
+    }, { status: 500 });
   }
 }

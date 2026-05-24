@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     
     if (!db) {
       console.error('❌ [lobby/create] Database not available');
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+      return NextResponse.json({ error: 'Database not available. Please check DATABASE_URL environment variable.' }, { status: 500 });
     }
 
     const body = await request.json();
@@ -47,32 +47,49 @@ export async function POST(request: NextRequest) {
     // Вычисляем фактическое максимальное количество игроков
     const actualMaxPlayers = addBot ? maxPlayers + 1 : maxPlayers;
 
-    await db.insert(lobbies).values({
-      id: lobbyId,
-      gameId,
-      name: lobbyName,
-      status: 'waiting',
-      nValue,
-      baseSpeedMs,
-      minPlayers: addBot ? Math.max(minPlayers - 1, 1) : minPlayers,
-      maxPlayers: actualMaxPlayers,
-      currentPlayers: 1,
-      hostId: userId,
-      password: password || null,
-      autoStartEnabled: false,
-      createdAt: new Date().toISOString(),
-    });
+    console.log('🔵 [lobby/create] Inserting lobby into database...');
+    
+    try {
+      await db.insert(lobbies).values({
+        id: lobbyId,
+        gameId,
+        name: lobbyName,
+        status: 'waiting',
+        nValue,
+        baseSpeedMs,
+        minPlayers: addBot ? Math.max(minPlayers - 1, 1) : minPlayers,
+        maxPlayers: actualMaxPlayers,
+        currentPlayers: 1,
+        hostId: userId,
+        password: password || null,
+        autoStartEnabled: false,
+        createdAt: new Date().toISOString(),
+      });
+      
+      console.log('✅ [lobby/create] Lobby inserted successfully');
+    } catch (insertError) {
+      console.error('❌ [lobby/create] Failed to insert lobby:', insertError);
+      throw insertError;
+    }
 
     // Добавляем хоста как первого игрока
-    await db.insert(lobbyPlayers).values({
-      id: nanoid(),
-      lobbyId,
-      userId,
-      name: userName,
-      isReady: false,
-      isHost: true,
-      joinedAt: new Date().toISOString(),
-    });
+    console.log('🔵 [lobby/create] Inserting player...');
+    try {
+      await db.insert(lobbyPlayers).values({
+        id: nanoid(),
+        lobbyId,
+        userId,
+        name: userName,
+        isReady: false,
+        isHost: true,
+        joinedAt: new Date().toISOString(),
+      });
+      
+      console.log('✅ [lobby/create] Player inserted successfully');
+    } catch (playerError) {
+      console.error('❌ [lobby/create] Failed to insert player:', playerError);
+      throw playerError;
+    }
 
     // Добавляем бота если запрошено
     if (addBot) {
@@ -120,7 +137,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('❌ [lobby/create] Error creating lobby:', error);
-    return NextResponse.json({ error: 'Failed to create lobby' }, { status: 500 });
+    console.error('❌ [lobby/create] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    return NextResponse.json({ 
+      error: 'Failed to create lobby',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

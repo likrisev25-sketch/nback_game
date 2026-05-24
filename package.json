@@ -15,6 +15,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
+    "db:check": "node scripts/check-db.js",
+    "db:create-tables": "node scripts/create-tables.js",
     "db:setup": "node scripts/setup-db.js",
     "db:setup-lobby": "node scripts/setup-lobby-db.js",
     "db:setup-tournament": "node scripts/setup-tournament-db.js",
