@@ -1,4 +1,5 @@
 import { pgTable, text, integer, boolean, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // Таблица пользователей
 export const users = pgTable('users', {
@@ -70,9 +71,7 @@ export const gameSessions = pgTable('game_sessions', {
 // Таблица игроков в сессии
 export const gamePlayers = pgTable('game_players', {
   id: text('id').primaryKey(),
-  sessionId: text('session_id')
-    .notNull()
-    .references(() => gameSessions.id, { onDelete: 'cascade' }),
+  sessionId: text('session_id').notNull(),
   userId: text('user_id').notNull(),
   name: text('name').notNull().default('Player'),
   correctAnswers: integer('correct_answers').notNull().default(0),
@@ -82,6 +81,18 @@ export const gamePlayers = pgTable('game_players', {
   isHost: boolean('is_host').notNull().default(false),
   joinedAt: text('joined_at').notNull(),
 });
+
+// Relations
+export const gameSessionsRelations = relations(gameSessions, ({ many }) => ({
+  players: many(gamePlayers),
+}));
+
+export const gamePlayersRelations = relations(gamePlayers, ({ one }) => ({
+  session: one(gameSessions, {
+    fields: [gamePlayers.sessionId],
+    references: [gameSessions.id],
+  }),
+}));
 
 // Таблица ходов игры
 export const gameMoves = pgTable('game_moves', {
