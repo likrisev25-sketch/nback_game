@@ -96,6 +96,8 @@ export function initSocket(server: HTTPServer): Server {
             name,
             isReady: false,
             isHost,
+            isBot: false,
+            botAccuracy: 100,
             connectionId: socket.id,
             lastHeartbeat: new Date().toISOString(),
             joinedAt: new Date().toISOString(),

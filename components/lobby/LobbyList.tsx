@@ -72,7 +72,14 @@ export const LobbyList: React.FC = () => {
   const handleCreateLobby = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!session?.user) return;
+    console.log('🔵 [LobbyList] handleCreateLobby вызван');
+    console.log('🔵 [LobbyList] session:', session);
+    
+    if (!session?.user) {
+      console.error('❌ [LobbyList] Нет сессии или пользователя');
+      setError('Необходимо авторизоваться');
+      return;
+    }
 
     try {
       console.log('🔵 [LobbyList] Создание лобби для пользователя:', session.user.id, session.user.name);
@@ -95,6 +102,7 @@ export const LobbyList: React.FC = () => {
         }),
       });
 
+      console.log('🔵 [LobbyList] Response status:', response.status);
       const data = await response.json();
       console.log('📥 [LobbyList] Ответ от сервера:', data);
       

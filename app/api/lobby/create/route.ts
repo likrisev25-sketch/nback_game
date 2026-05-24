@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
         name: userName,
         isReady: false,
         isHost: true,
+        isBot: false,
+        botAccuracy: 100,
         joinedAt: new Date().toISOString(),
       });
       
@@ -101,6 +103,8 @@ export async function POST(request: NextRequest) {
         name: `${botName} (${botAccuracy}%)`,
         isReady: true, // Бот всегда готов
         isHost: false,
+        isBot: true,
+        botAccuracy: botAccuracy,
         joinedAt: new Date().toISOString(),
       });
       console.log('✅ [lobby/create] Bot added:', `${botName} (${botAccuracy}%)`);
