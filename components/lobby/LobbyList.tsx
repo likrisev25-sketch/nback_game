@@ -109,8 +109,8 @@ export const LobbyList: React.FC = () => {
       if (data.success) {
         // Сохраняем lobbyId для модального окна выбора
         setPendingLobbyId(data.lobby.id);
-        // Присоединяемся к лобби через WebSocket
-        joinLobby(data.lobby.id, session.user.id, session.user.name);
+        // Присоединяемся к лобби
+        await joinLobby(data.lobby.id, session.user.id, session.user.name);
         // Показываем модальное окно выбора
         setShowCreateModal(false);
         setShowStartChoiceModal(true);
@@ -139,8 +139,8 @@ export const LobbyList: React.FC = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Присоединяемся к лобби через WebSocket
-        joinLobby(lobbyId, session.user.id, session.user.name);
+        // Присоединяемся к лобби
+        await joinLobby(lobbyId, session.user.id, session.user.name);
         router.push(`/lobby/${lobbyId}`);
       } else {
         setError(data.error || 'Не удалось присоединиться к лобби');
@@ -160,10 +160,10 @@ export const LobbyList: React.FC = () => {
     }
   };
 
-  const handleEnableAutoStart = () => {
+  const handleEnableAutoStart = async () => {
     // Включаем автозапуск и переходим в лобби
-    if (pendingLobbyId) {
-      toggleAutoStart(pendingLobbyId);
+    if (pendingLobbyId && session?.user) {
+      await toggleAutoStart(pendingLobbyId, session.user.id);
       router.push(`/lobby/${pendingLobbyId}`);
       setShowStartChoiceModal(false);
       setPendingLobbyId(null);
