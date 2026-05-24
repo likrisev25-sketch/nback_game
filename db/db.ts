@@ -1,24 +1,17 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import * as schema from './schema';
+import * as path from 'path';
 
-console.log('🔵 [db] Initializing database connection...');
-console.log('🔵 [db] NODE_ENV:', process.env.NODE_ENV);
-console.log('🔵 [db] DATABASE_URL set:', !!process.env.DATABASE_URL);
+console.log('🔵 [db] Initializing SQLite database...');
 
-// Для Vercel используем только Neon PostgreSQL
-const sql = process.env.DATABASE_URL 
-  ? neon(process.env.DATABASE_URL)
-  : null;
+// Для локальной разработки используем SQLite
+const sqlitePath = path.join(process.cwd(), 'nback.db');
+const sqlite = new Database(sqlitePath);
 
-if (!sql) {
-  console.error('❌ [db] DATABASE_URL is not set!');
-  throw new Error('DATABASE_URL environment variable is required');
-}
+export const db = drizzle(sqlite, { schema });
 
-export const db = drizzle(sql, { schema });
-
-console.log('✅ [db] Connected to Neon PostgreSQL');
+console.log('✅ [db] Connected to SQLite:', sqlitePath);
 
 // Экспортируем типы
 export type User = typeof schema.users.$inferSelect;

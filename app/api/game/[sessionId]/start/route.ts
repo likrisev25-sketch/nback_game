@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { gameSessions, gamePlayers } from '@/db/schema';
+import { gameSessions, gamePlayers, sequences } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSessionFromRequest } from '@/lib/session';
+import { v4 as uuidv4 } from 'uuid';
+
+// Генерация последовательности
+function generateNBackSequence(totalSteps: number, nValue: number, gridSize: number = 9): number[] {
+  const positions: number[] = [];
+  
+  for (let i = 0; i < totalSteps; i++) {
+    let position: number;
+    
+    if (i >= nValue && Math.random() < 0.3) {
+      const matchPosition = positions[i - nValue];
+      position = matchPosition;
+    } else {
+      position = Math.floor(Math.random() * gridSize);
+    }
+    
+    positions.push(position);
+  }
+  
+  return positions;
+}
 
 export async function POST(
   request: NextRequest,
@@ -94,9 +115,24 @@ export async function POST(
       }
     }
 
+    // Генерируем последовательность
+    const totalSteps = 30; // Можно сделать настраиваемым
+    const positions = generateNBackSequence(totalSteps, gameSession.nValue);
+
+    // Сохраняем последовательность
+    const now = new Date().toISOString();
+    await db.insert(sequences).values({
+      id: uuidv4(),
+      sessionId,
+      positions: JSON.stringify(positions),
+      totalSteps,
+      createdAt: now,
+    });
+
+    console.log('✅ Sequence generated and saved:', positions);
+
     // Обновляем статус сессии
     console.log('🔵 Updating session status to playing...');
-    const now = new Date().toISOString();
     await db
       .update(gameSessions)
       .set({
