@@ -112,7 +112,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       lobby: {
-        ...createdLobby,
+        id: createdLobby.id,
+        name: createdLobby.name,
+        status: createdLobby.status,
+        nValue: createdLobby.nValue,
+        baseSpeedMs: createdLobby.baseSpeedMs,
+        minPlayers: createdLobby.minPlayers,
+        maxPlayers: createdLobby.maxPlayers,
+        currentPlayers: players.length,
+        hostId: createdLobby.hostId,
+        autoStartEnabled: createdLobby.autoStartEnabled,
+        createdAt: createdLobby.createdAt,
         players: players.map(p => ({
           id: p.userId,
           userId: p.userId,

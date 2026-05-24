@@ -69,6 +69,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       name: session.user.name,
       isReady: false,
       isHost: false,
+      isBot: false,
+      botAccuracy: 100,
       joinedAt: new Date().toISOString(),
     });
 

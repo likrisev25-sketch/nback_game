@@ -37,8 +37,17 @@ export async function GET(request: NextRequest) {
           .where(eq(lobbyPlayers.lobbyId, lobby.id));
 
         return {
-          ...lobby,
+          id: lobby.id,
+          name: lobby.name,
+          status: lobby.status,
+          nValue: lobby.nValue,
+          baseSpeedMs: lobby.baseSpeedMs,
+          minPlayers: lobby.minPlayers,
+          maxPlayers: lobby.maxPlayers,
           currentPlayers: players.length,
+          hostId: lobby.hostId,
+          autoStartEnabled: lobby.autoStartEnabled,
+          createdAt: lobby.createdAt,
           players: players.map((p: typeof lobbyPlayers.$inferSelect) => ({
             id: p.userId,
             userId: p.userId,
