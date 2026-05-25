@@ -23,8 +23,7 @@ export const LobbyList: React.FC = () => {
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showStartChoiceModal, setShowStartChoiceModal] = useState(false);
-  const [pendingLobbyId, setPendingLobbyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const { data: session } = useSession();
@@ -81,6 +80,9 @@ export const LobbyList: React.FC = () => {
       return;
     }
 
+    setCreating(true);
+    setError(null);
+    
     try {
       console.log('🔵 [LobbyList] Создание лобби для пользователя:', session.user.id, session.user.name);
       
@@ -106,21 +108,18 @@ export const LobbyList: React.FC = () => {
       const data = await response.json();
       console.log('📥 [LobbyList] Ответ от сервера:', data);
       
-      if (data.success) {
-        // Сохраняем lobbyId для модального окна выбора
-        setPendingLobbyId(data.lobby.id);
-        // Присоединяемся к лобби
-        await joinLobby(data.lobby.id, session.user.id, session.user.name);
-        // Показываем модальное окно выбора
-        setShowCreateModal(false);
-        setShowStartChoiceModal(true);
-      } else {
-        console.error('❌ [LobbyList] Ошибка создания лобби:', data.error);
-        setError(data.error || 'Не удалось создать лобби');
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Не удалось создать лобби');
       }
-    } catch (error) {
-      console.error('❌ [LobbyList] Исключение при создании лобби:', error);
-      setError('Произошла ошибка при создании лобби');
+      
+      // Сразу переходим в созданное лобби
+      setShowCreateModal(false);
+      router.push(`/lobby/${data.lobby.id}`);
+    } catch (err) {
+      console.error('❌ [LobbyList] Исключение при создании лобби:', err);
+      setError(err instanceof Error ? err.message : 'Произошла ошибка при создании лобби');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -148,25 +147,6 @@ export const LobbyList: React.FC = () => {
     } catch (error) {
       console.error('Error joining lobby:', error);
       setError('Произошла ошибка при присоединении');
-    }
-  };
-
-  const handleStartImmediately = () => {
-    // Начинаем игру сразу без автозапуска
-    if (pendingLobbyId) {
-      router.push(`/lobby/${pendingLobbyId}`);
-      setShowStartChoiceModal(false);
-      setPendingLobbyId(null);
-    }
-  };
-
-  const handleEnableAutoStart = async () => {
-    // Включаем автозапуск и переходим в лобби
-    if (pendingLobbyId && session?.user) {
-      await toggleAutoStart(pendingLobbyId, session.user.id);
-      router.push(`/lobby/${pendingLobbyId}`);
-      setShowStartChoiceModal(false);
-      setPendingLobbyId(null);
     }
   };
 
@@ -418,81 +398,12 @@ export const LobbyList: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                disabled={creating}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition-colors"
               >
-                Создать
+                {creating ? 'Создание...' : 'Создать'}
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Модальное окно выбора стратегии запуска */}
-      {showStartChoiceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                Лобби создано! 🎉
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Выберите стратегию запуска игры
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <button
-                onClick={handleStartImmediately}
-                className="w-full p-4 border-2 border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    🚀
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white text-lg">
-                      Начать игру сразу
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Перейти в лобби и начать игру вручную
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={handleEnableAutoStart}
-                className="w-full p-4 border-2 border-purple-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    ⚡
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white text-lg">
-                      Включить автозапуск
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Игра начнётся автоматически когда все игроки нажмут «Готов»
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              <div className="mt-6 text-center border-t pt-4">
-                <button
-                  onClick={() => {
-                    setShowStartChoiceModal(false);
-                    if (pendingLobbyId) {
-                      router.push(`/lobby/${pendingLobbyId}`);
-                    }
-                  }}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
-                >
-                  Перейти в лобби без настроек
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

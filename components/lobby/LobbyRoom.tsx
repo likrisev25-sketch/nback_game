@@ -28,6 +28,7 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [isHost, setIsHost] = useState(false);
 
   // Загружаем лобби при монтировании
   useEffect(() => {
@@ -42,6 +43,28 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
       return () => clearInterval(interval);
     }
   }, [lobbyId, refreshLobby]);
+
+  // Проверяем является ли пользователь хостом
+  useEffect(() => {
+    if (currentLobby && session?.user) {
+      const host = currentLobby.players.find(p => p.userId === session.user.id && p.isHost);
+      setIsHost(!!host);
+      
+      // Если хост и лобби только что создано (все готовы кроме возможно хоста), автоматически начинаем
+      if (host && currentLobby.status === 'waiting' && !gameStarted) {
+        const readyCount = currentLobby.players.filter(p => p.isReady).length;
+        if (readyCount >= currentLobby.minPlayers - 1) {
+          // Хост автоматически становится готовым и начинает игру
+          setTimeout(async () => {
+            await setReady(currentLobby.id, session.user.id, true);
+            setTimeout(() => {
+              startGame(currentLobby.id, session.user.id);
+            }, 500);
+          }, 1000);
+        }
+      }
+    }
+  }, [currentLobby, session, gameStarted]);
 
   useEffect(() => {
     if (!currentLobby && !isLoading) {
@@ -113,6 +136,13 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
     );
   }
 
+  const myPlayer = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
+  const isReadyState = myPlayer?.isReady || false;
+  const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
+  const isHostLocal = currentLobby.players.some(
+    p => p.userId === session?.user?.id && p.isHost
+  );
+
   // Показываем игру если статус 'in_progress' или gameStarted
   if (currentLobby.status === 'in_progress' || gameStarted) {
     return (
@@ -128,14 +158,6 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
       </div>
     );
   }
-
-  const isHost = currentLobby.players.some(
-    p => p.userId === session?.user?.id && p.isHost
-  );
-  
-  const myPlayer = currentLobby.players.find((p: LobbyPlayer) => p.userId === session?.user?.id);
-  const isReadyState = myPlayer?.isReady || false;
-  const allReady = currentLobby.players.every((p: LobbyPlayer) => p.isReady);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -234,7 +256,7 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
             {isReadyState ? 'Не готов' : 'Готов'}
           </button>
 
-          {isHost && (
+          {isHostLocal && (
             <button
               onClick={async () => {
                 if (!session?.user) return;
@@ -263,9 +285,9 @@ export const LobbyRoom: React.FC<LobbyRoomProps> = ({ lobbyId }) => {
         </p>
       )}
 
-      {currentLobby.status === 'waiting' && allReady && isHost && currentLobby.currentPlayers >= currentLobby.minPlayers && (
+      {currentLobby.status === 'waiting' && allReady && isHostLocal && currentLobby.currentPlayers >= currentLobby.minPlayers && (
         <p className="mt-4 text-center text-green-600 dark:text-green-400 font-semibold">
-          Все игроки готовы! Нажмите «Начать игру»
+          Все игроки готовы! Игра начнётся автоматически...
         </p>
       )}
     </div>
