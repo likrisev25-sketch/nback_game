@@ -17,8 +17,8 @@ export function SimpleLobby() {
   const createSession = trpc.gameSimple.createSession.useMutation({
     onSuccess: (data) => {
       console.log('✅ Сессия создана:', data);
-      alert(`Сессия создана! ID: ${data.sessionId}`);
       setSessionId(data.sessionId);
+      setPlayerId(data.playerId || '');
       setShowCreate(false);
     },
     onError: (error) => {
@@ -28,9 +28,12 @@ export function SimpleLobby() {
   });
   
   const joinSession = trpc.gameSimple.joinSession.useMutation({
-    onSuccess: () => {
-      alert('Вы присоединились!');
+    onSuccess: (data) => {
+      console.log('✅ Присоединился к сессии:', data);
       setShowCreate(false);
+      if (data.playerId) {
+        setPlayerId(data.playerId);
+      }
     },
     onError: (error) => alert(`Ошибка: ${error.message}`)
   });
@@ -51,8 +54,15 @@ export function SimpleLobby() {
         setPlayerId(currentPlayer.id);
         setNValue(sessionData.data.nValue || 2);
       }
+      
+      // Автоматически переходим к игре если статус playing и есть playerId
+      if (sessionData.data.status === 'playing' && currentPlayer && !showGame) {
+        setPlayerId(currentPlayer.id);
+        setNValue(sessionData.data.nValue || 2);
+        setTimeout(() => setShowGame(true), 500);
+      }
     }
-  }, [sessionData.data, userName, setPlayerId, setNValue]);
+  }, [sessionData.data, userName, showGame]);
   
   const listSessions = trpc.gameSimple.listSessions.useQuery(undefined, {
     refetchInterval: 3000
@@ -60,7 +70,7 @@ export function SimpleLobby() {
   
   const startGame = trpc.gameSimple.startGame.useMutation({
     onSuccess: (data) => {
-      alert('Игра началась!');
+      console.log('✅ Игра началась:', data);
       // Перезагрузить данные сессии и получить playerId
       sessionData.refetch();
       // Находим playerId текущего игрока
@@ -71,7 +81,10 @@ export function SimpleLobby() {
         setShowGame(true);
       }
     },
-    onError: (error) => alert(`Ошибка: ${error.message}`)
+    onError: (error) => {
+      console.error('❌ Ошибка запуска игры:', error);
+      alert(`Ошибка: ${error.message}`);
+    }
   });
   
   const isHost = sessionData.data?.players?.some(p => p.name === userName);
@@ -253,12 +266,18 @@ export function SimpleLobby() {
                   </button>
                 )}
                 
+                {sessionData.data?.status === 'waiting' && !isHost && (
+                  <p className="text-center text-gray-600 dark:text-gray-400 py-4">
+                    Ожидайте пока хост начнёт игру...
+                  </p>
+                )}
+                
                 {sessionData.data?.status === 'playing' && (
                   <button
                     onClick={() => setShowGame(true)}
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition text-lg"
                   >
-                    🎮 Продолжить игру
+                    🎮 Перейти к игре
                   </button>
                 )}
               </>

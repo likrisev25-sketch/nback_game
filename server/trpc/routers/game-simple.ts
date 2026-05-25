@@ -1,10 +1,31 @@
 import { router, publicProcedure } from '../trpc';
 import { z } from 'zod';
 import { db } from '@/db/db';
-import { gameSessions, gamePlayers } from '@/db/schema';
+import { gameSessions, gamePlayers, sequences } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { v4 as uuidv4 } from 'uuid';
 import { getUserName } from '@/lib/auth-simple';
+
+// Генерация последовательности
+function generateNBackSequence(totalSteps: number, nValue: number, gridSize: number = 9): number[] {
+  const positions: number[] = [];
+  
+  for (let i = 0; i < totalSteps; i++) {
+    let position: number;
+    
+    if (i >= nValue && Math.random() < 0.3) {
+      const matchPosition = positions[i - nValue];
+      position = matchPosition;
+    } else {
+      position = Math.floor(Math.random() * gridSize);
+    }
+    
+    positions.push(position);
+  }
+  
+  return positions;
+}
 
 export const gameRouter = router({
   // Создание сессии
@@ -18,10 +39,11 @@ export const gameRouter = router({
     .mutation(async ({ ctx, input }) => {
       console.log('🔵 [gameSimple.createSession] Creating session with input:', input);
       const sessionId = nanoid();
+      const playerId = nanoid();
       const userId = 'user_' + nanoid();
       const playerName = getUserName();
       
-      console.log('🔵 [gameSimple.createSession] Generated sessionId:', sessionId, 'playerName:', playerName);
+      console.log('🔵 [gameSimple.createSession] Generated sessionId:', sessionId, 'playerId:', playerId, 'playerName:', playerName);
       
       const now = new Date().toISOString();
       
@@ -42,7 +64,7 @@ export const gameRouter = router({
         
         // Добавляем создателя как первого игрока
         await db.insert(gamePlayers).values({
-          id: nanoid(),
+          id: playerId,
           sessionId: sessionId,
           userId: userId,
           name: playerName,
@@ -54,9 +76,9 @@ export const gameRouter = router({
           joinedAt: now,
         });
         
-        console.log('✅ [gameSimple.createSession] Player inserted');
+        console.log('✅ [gameSimple.createSession] Player inserted with playerId:', playerId);
         
-        return { sessionId, name: input.name };
+        return { sessionId, playerId, name: input.name };
       } catch (error) {
         console.error('❌ [gameSimple.createSession] Error:', error);
         throw error;
@@ -74,7 +96,6 @@ export const gameRouter = router({
       if (!session) throw new Error('Session not found');
       if (session.status !== 'waiting') throw new Error('Game already started');
       
-      const userId = 'user_' + nanoid();
       const playerName = getUserName();
       const now = new Date().toISOString();
       
@@ -86,22 +107,27 @@ export const gameRouter = router({
         )
       });
       
-      if (!existingPlayer) {
-        await db.insert(gamePlayers).values({
-          id: nanoid(),
-          sessionId: input.sessionId,
-          userId: userId,
-          name: playerName,
-          correctAnswers: 0,
-          errors: 0,
-          isBot: false,
-          botAccuracy: 100,
-          isHost: false,
-          joinedAt: now,
-        });
+      if (existingPlayer) {
+        return { success: true, playerId: existingPlayer.id };
       }
       
-      return { success: true };
+      const playerId = nanoid();
+      const userId = 'user_' + nanoid();
+      
+      await db.insert(gamePlayers).values({
+        id: playerId,
+        sessionId: input.sessionId,
+        userId: userId,
+        name: playerName,
+        correctAnswers: 0,
+        errors: 0,
+        isBot: false,
+        botAccuracy: 100,
+        isHost: false,
+        joinedAt: now,
+      });
+      
+      return { success: true, playerId };
     }),
   
   // Получить данные сессии
@@ -141,9 +167,38 @@ export const gameRouter = router({
   startGame: publicProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(async ({ input }) => {
+      const session = await db.query.gameSessions.findFirst({
+        where: eq(gameSessions.id, input.sessionId)
+      });
+      
+      if (!session) throw new Error('Session not found');
+      if (session.status !== 'waiting') {
+        return { success: true, alreadyPlaying: true };
+      }
+      
+      // Генерируем последовательность
+      const totalSteps = 30;
+      const positions = generateNBackSequence(totalSteps, session.nValue);
+      
+      const now = new Date().toISOString();
+      
+      // Сохраняем последовательность
+      await db.insert(sequences).values({
+        id: uuidv4(),
+        sessionId: input.sessionId,
+        positions: JSON.stringify(positions),
+        totalSteps,
+        createdAt: now,
+      });
+      
+      // Обновляем статус сессии
       await db.update(gameSessions)
-        .set({ status: 'playing', updatedAt: new Date().toISOString() })
+        .set({ 
+          status: 'playing', 
+          updatedAt: new Date().toISOString() 
+        })
         .where(eq(gameSessions.id, input.sessionId));
-      return { success: true };
+      
+      return { success: true, alreadyPlaying: false };
     })
 });
