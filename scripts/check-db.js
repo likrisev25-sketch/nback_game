@@ -1,6 +1,7 @@
 const { drizzle } = require('drizzle-orm/postgres-js');
 const postgres = require('postgres');
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config(); // Fallback to .env
 
 async function checkDatabase() {
   console.log('🔵 Checking database connection...');

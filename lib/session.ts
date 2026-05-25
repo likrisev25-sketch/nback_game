@@ -21,7 +21,12 @@ export const getSession = cache(async () => {
  * Получение сессии из API Route запроса
  */
 export async function getSessionFromRequest(request: NextRequest) {
-  const token = request.cookies.get('session')?.value;
+  // Получаем cookie из headers
+  const cookieHeader = request.headers.get('cookie');
+  const cookieMatch = cookieHeader?.match(/session=([^;]+)/);
+  const token = cookieMatch ? cookieMatch[1] : null;
+  
+  console.log('🔵 [getSessionFromRequest] Token from cookie:', token ? 'found' : 'not found');
   
   if (!token) {
     return null;

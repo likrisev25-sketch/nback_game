@@ -15,9 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Получаем пользователя из сессии
+    console.log('🔵 [lobby/create] Getting session from request...');
     const session = await getSessionFromRequest(request);
+    console.log('🔵 [lobby/create] Session result:', session ? 'found' : 'not found');
+    
     if (!session?.user?.id) {
-      console.error('❌ [lobby/create] User not authenticated');
+      console.error('❌ [lobby/create] User not authenticated, session:', session);
       return NextResponse.json(
         { error: 'Необходимо авторизоваться для создания лобби' },
         { status: 401 }
@@ -149,9 +152,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('❌ [lobby/create] Error:', error);
+    console.error('❌ [lobby/create] Error stack:', (error as Error).stack);
     return NextResponse.json({ 
       error: 'Failed to create lobby',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      stack: (error as Error).stack
     }, { status: 500 });
   }
 }

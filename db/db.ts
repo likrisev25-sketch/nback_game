@@ -24,6 +24,7 @@ if (databaseUrl && databaseUrl.includes('neon')) {
   const client = postgres(databaseUrl, {
     max: 1, // Минимальное количество соединений для serverless
     prepare: false, // Отключаем prepared statements для serverless
+    ssl: { rejectUnauthorized: false }, // SSL для Neon
   });
   
   db = drizzle(client, { schema });
