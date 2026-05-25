@@ -3,6 +3,7 @@ import { db } from '@/db/db';
 import { lobbies, lobbyPlayers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { getSessionFromRequest } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,16 @@ export async function POST(request: NextRequest) {
     if (!db) {
       console.error('❌ [lobby/create] Database not available');
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
+    // Получаем пользователя из сессии
+    const session = await getSessionFromRequest(request);
+    if (!session?.user?.id) {
+      console.error('❌ [lobby/create] User not authenticated');
+      return NextResponse.json(
+        { error: 'Необходимо авторизоваться для создания лобби' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
@@ -26,8 +37,7 @@ export async function POST(request: NextRequest) {
       password,
       addBot = false,
       botAccuracy = 80,
-      botName = 'Бот',
-      userName = 'Игрок'
+      botName = 'Бот'
     } = body;
 
     if (!gameId) {
@@ -35,11 +45,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Game ID is required' }, { status: 400 });
     }
 
-    const userId = nanoid();
+    // Используем реальный userId из сессии
+    const userId = session.user.id;
     const lobbyId = nanoid();
     const lobbyName = name || `Лобби ${lobbyId.slice(0, 6)}`;
+    const userName = session.user.name || 'Игрок';
 
-    console.log('🔵 [lobby/create] Creating lobby:', { lobbyId, userId, lobbyName });
+    console.log('🔵 [lobby/create] Creating lobby:', { lobbyId, userId, lobbyName, userName });
 
     const now = new Date().toISOString();
 
@@ -64,7 +76,7 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ [lobby/create] Lobby inserted');
 
-    // Добавляем игрока
+    // Добавляем игрока с реальным userId
     await db.insert(lobbyPlayers).values({
       id: nanoid(),
       lobbyId,

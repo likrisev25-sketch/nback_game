@@ -57,7 +57,18 @@ function isValidGameId(id: string): boolean {
   return /^\d{6}$/.test(id);
 }
 
-// Валидация UUID
+// Валидация nanoid (альтернативный формат ID)
+function isValidNanoid(id: string): boolean {
+  // nanoid генерирует строки вида: N1abc... или просто буквы+цифры
+  return /^[A-Za-z0-9_-]{5,21}$/.test(id);
+}
+
+// Валидация любого формата ID игры
+function isValidSessionId(id: string): boolean {
+  return isValidGameId(id) || isValidNanoid(id);
+}
+
+// Валидация UUID для playerId
 function isValidUUID(id: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(id);
@@ -88,8 +99,8 @@ export async function POST(
     const { sessionId } = await params;
     const sessionIdStr = String(sessionId);
     
-    // Валидация sessionId
-    if (!sessionIdStr || !isValidGameId(sessionIdStr)) {
+    // Валидация sessionId (поддерживаем 6-значный числовой ID и nanoid)
+    if (!sessionIdStr || !isValidSessionId(sessionIdStr)) {
       console.error('❌ Некорректный sessionId:', sessionIdStr);
       return NextResponse.json(
         { error: 'Некорректный ID игры' },

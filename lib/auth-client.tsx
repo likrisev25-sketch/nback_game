@@ -10,35 +10,45 @@ console.log('[auth-client] API_URL:', API_URL);
 
 export const authClient = {
   signUp: async (email: string, password: string, name: string) => {
-    const response = await fetch(`${API_URL}/api/register?t=${CACHE_BUSTER}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Registration failed');
+    try {
+      const response = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        return { error: new Error(error.error || 'Registration failed') };
+      }
+      
+      const data = await response.json();
+      return { data };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error('Registration failed') };
     }
-    
-    return await response.json();
   },
   
   signIn: async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/api/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Sign in failed');
+    try {
+      const response = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        return { error: new Error(error.error || 'Sign in failed') };
+      }
+      
+      const data = await response.json();
+      return { data };
+    } catch (err) {
+      return { error: err instanceof Error ? err : new Error('Sign in failed') };
     }
-    
-    return await response.json();
   },
   
   signOut: async () => {
@@ -50,8 +60,7 @@ export const authClient = {
   },
   
   getSession: async () => {
-    const timestamp = Date.now();
-    const response = await fetch(`${API_URL}/api/auth/session?t=${timestamp}`, {
+    const response = await fetch(`${API_URL}/api/auth/session`, {
       method: 'GET',
       credentials: 'include',
     });

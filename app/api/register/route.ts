@@ -23,9 +23,10 @@ export async function POST(request: NextRequest) {
     console.log('✅ [REGISTER] Registration successful');
     console.log('🔵 [REGISTER] Setting session cookie for user:', result.user.name);
     
+    // Устанавливаем cookie на NextResponse
     const response = NextResponse.json({ 
+      success: true,
       user: result.user,
-      session: result.session 
     });
     
     response.cookies.set('session', result.session.token, {
