@@ -163,11 +163,11 @@ export function SimpleLobby() {
               </h2>
               {listSessions.isLoading ? (
                 <p className="text-gray-600 dark:text-gray-400">Загрузка...</p>
-              ) : listSessions.data?.length === 0 ? (
+              ) : !Array.isArray(listSessions.data) || listSessions.data.length === 0 ? (
                 <p className="text-gray-600 dark:text-gray-400">Нет активных игр</p>
               ) : (
                 <div className="space-y-3">
-                  {listSessions.data?.map((session: any) => (
+                  {listSessions.data.map((session: any) => (
                     <div
                       key={session.id}
                       className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
