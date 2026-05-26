@@ -45,9 +45,13 @@ export const gameSimpleRouter = router({
       baseSpeedMs: z.number().int().min(500).max(5000).default(1500),
     }))
     .mutation(async ({ input }) => {
+      console.log('🔵 [gameSimple.createSession] Received input:', input);
+      
       const sessionId = uuidv4();
       const now = new Date().toISOString();
       const playerId = uuidv4();
+
+      console.log('🔵 [gameSimple.createSession] Creating session:', sessionId);
 
       await db.insert(gameSessions).values({
         id: sessionId,
@@ -60,6 +64,8 @@ export const gameSimpleRouter = router({
         createdAt: now,
         updatedAt: now,
       });
+
+      console.log('🔵 [gameSimple.createSession] Session created');
 
       await db.insert(gamePlayers).values({
         id: playerId,
@@ -74,12 +80,17 @@ export const gameSimpleRouter = router({
         joinedAt: now,
       });
 
-      return {
+      console.log('🔵 [gameSimple.createSession] Player created');
+
+      const result = {
         sessionId,
         playerId,
         name: input.name,
         nValue: input.nValue,
       };
+      
+      console.log('🔵 [gameSimple.createSession] Returning:', result);
+      return result;
     }),
 
   joinSession: publicProcedure
