@@ -16,7 +16,7 @@ if (!databaseUrl) {
 
 // Для продакшена на Vercel используем PostgreSQL через Neon
 // Для локальной разработки используем SQLite
-let db;
+let db: any;
 
 if (databaseUrl && databaseUrl.includes('neon')) {
   // PostgreSQL для Vercel/Neon
