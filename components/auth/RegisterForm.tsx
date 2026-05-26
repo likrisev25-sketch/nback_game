@@ -1,3 +1,4 @@
+// Файл: RegisterForm.tsx
 'use client';
 
 import React, { useState, useTransition } from 'react';

@@ -1,3 +1,4 @@
+// Файл: Grid3x3.tsx
 'use client';
 
 import React, { useState, useCallback } from 'react';

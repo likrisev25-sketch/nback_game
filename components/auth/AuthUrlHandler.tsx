@@ -1,3 +1,4 @@
+// Файл: AuthUrlHandler.tsx
 'use client';
 
 import { useEffect, Suspense } from 'react';

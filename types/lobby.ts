@@ -1,3 +1,4 @@
+// Файл: lobby.ts
 // Types для системы лобби и WebSocket
 
 export interface LobbyPlayer {

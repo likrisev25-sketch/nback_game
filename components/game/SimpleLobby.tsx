@@ -1,3 +1,4 @@
+// Файл: SimpleLobby.tsx
 'use client';
 
 import { useState, useEffect } from 'react';

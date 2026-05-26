@@ -1,3 +1,4 @@
+// Файл: layout.tsx
 // app/layout.tsx
 import type { Metadata } from "next";
 import { SessionProvider } from "@/lib/auth-client";

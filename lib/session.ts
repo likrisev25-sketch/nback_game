@@ -1,3 +1,4 @@
+// Файл: session.ts
 import { auth } from '@/server/auth';
 import { cookies } from 'next/headers';
 import { cache } from 'react';

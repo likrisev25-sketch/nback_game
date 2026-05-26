@@ -1,11 +1,12 @@
 import { router } from './trpc';
-import { gameRouter } from './routers/game';
-import { gameRouter as gameSimpleRouter } from './routers/game-simple';
+import { gameSimpleRouter } from './routers/game-simple';
+import { lobbyRouter } from './routers/lobby';
+import { tournamentRouter } from './routers/tournament';
 
-// Главный роутер, объединяющий все роуты приложения
 export const appRouter = router({
-  game: gameRouter,
   gameSimple: gameSimpleRouter,
+  lobby: lobbyRouter,
+  tournament: tournamentRouter,
 });
 
 export type AppRouter = typeof appRouter;

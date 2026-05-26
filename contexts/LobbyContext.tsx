@@ -1,3 +1,4 @@
+// Файл: LobbyContext.tsx
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';

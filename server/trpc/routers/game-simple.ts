@@ -1,13 +1,11 @@
-import { router, publicProcedure } from '../trpc';
 import { z } from 'zod';
+import { router, publicProcedure } from '../trpc';
 import { db } from '@/db/db';
-import { gameSessions, gamePlayers, sequences } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { gameSessions, gamePlayers, sequences, gameMoves } from '@/db/schema';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { getUserName } from '@/lib/auth-simple';
+import { TRPCError } from '@trpc/server';
 
-// Генерация последовательности
 function generateNBackSequence(totalSteps: number, nValue: number, gridSize: number = 9): number[] {
   const positions: number[] = [];
   
@@ -15,8 +13,7 @@ function generateNBackSequence(totalSteps: number, nValue: number, gridSize: num
     let position: number;
     
     if (i >= nValue && Math.random() < 0.3) {
-      const matchPosition = positions[i - nValue];
-      position = matchPosition;
+      position = positions[i - nValue];
     } else {
       position = Math.floor(Math.random() * gridSize);
     }
@@ -27,98 +24,97 @@ function generateNBackSequence(totalSteps: number, nValue: number, gridSize: num
   return positions;
 }
 
-export const gameRouter = router({
-  // Создание сессии
+function checkNBackAnswer(
+  stepNumber: number,
+  sequence: number[],
+  playerAnswer: boolean,
+  nValue: number
+): { isCorrect: boolean; isMatch: boolean } {
+  const isMatch = stepNumber >= nValue && sequence[stepNumber] === sequence[stepNumber - nValue];
+  const isCorrect = playerAnswer === isMatch;
+  
+  return { isCorrect, isMatch };
+}
+
+export const gameSimpleRouter = router({
   createSession: publicProcedure
     .input(z.object({
-      name: z.string(),
-      nValue: z.number().min(1).max(5),
-      totalSteps: z.number().min(10).max(100),
-      baseSpeedMs: z.number().min(500).max(5000),
+      name: z.string().min(1).max(100),
+      nValue: z.number().int().min(1).max(5).default(2),
+      totalSteps: z.number().int().min(10).max(100).default(30),
+      baseSpeedMs: z.number().int().min(500).max(5000).default(1500),
     }))
-    .mutation(async ({ ctx, input }) => {
-      console.log('🔵 [gameSimple.createSession] Creating session with input:', input);
-      const sessionId = nanoid();
-      const playerId = nanoid();
-      const userId = 'user_' + nanoid();
-      const playerName = getUserName();
-      
-      console.log('🔵 [gameSimple.createSession] Generated sessionId:', sessionId, 'playerId:', playerId, 'playerName:', playerName);
-      
+    .mutation(async ({ input }) => {
+      const sessionId = uuidv4();
       const now = new Date().toISOString();
-      
-      try {
-        await db.insert(gameSessions).values({
-          id: sessionId,
-          name: input.name || 'Без названия',
-          nValue: input.nValue,
-          baseSpeedMs: input.baseSpeedMs,
-          currentSpeedMs: input.baseSpeedMs,
-          maxPlayers: 4,
-          status: 'waiting',
-          createdAt: now,
-          updatedAt: now,
-        });
-        
-        console.log('✅ [gameSimple.createSession] Session inserted');
-        
-        // Добавляем создателя как первого игрока
-        await db.insert(gamePlayers).values({
-          id: playerId,
-          sessionId: sessionId,
-          userId: userId,
-          name: playerName,
-          correctAnswers: 0,
-          errors: 0,
-          isBot: false,
-          botAccuracy: 100,
-          isHost: true,
-          joinedAt: now,
-        });
-        
-        console.log('✅ [gameSimple.createSession] Player inserted with playerId:', playerId);
-        
-        return { sessionId, playerId, name: input.name };
-      } catch (error) {
-        console.error('❌ [gameSimple.createSession] Error:', error);
-        throw error;
-      }
+      const playerId = uuidv4();
+
+      await db.insert(gameSessions).values({
+        id: sessionId,
+        name: input.name,
+        nValue: input.nValue,
+        baseSpeedMs: input.baseSpeedMs,
+        currentSpeedMs: input.baseSpeedMs,
+        maxPlayers: 2,
+        status: 'waiting',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(gamePlayers).values({
+        id: playerId,
+        sessionId: sessionId,
+        userId: playerId,
+        name: 'Player',
+        correctAnswers: 0,
+        errors: 0,
+        isBot: false,
+        botAccuracy: 100,
+        isHost: true,
+        joinedAt: now,
+      });
+
+      return {
+        sessionId,
+        playerId,
+        name: input.name,
+        nValue: input.nValue,
+      };
     }),
-  
-  // Присоединение к сессии
+
   joinSession: publicProcedure
-    .input(z.object({ sessionId: z.string() }))
+    .input(z.object({
+      sessionId: z.string(),
+    }))
     .mutation(async ({ input }) => {
       const session = await db.query.gameSessions.findFirst({
-        where: eq(gameSessions.id, input.sessionId)
+        where: eq(gameSessions.id, input.sessionId),
       });
-      
-      if (!session) throw new Error('Session not found');
-      if (session.status !== 'waiting') throw new Error('Game already started');
-      
-      const playerName = getUserName();
-      const now = new Date().toISOString();
-      
-      // Проверяем, не присоединился ли уже этот игрок
-      const existingPlayer = await db.query.gamePlayers.findFirst({
-        where: and(
-          eq(gamePlayers.sessionId, input.sessionId),
-          eq(gamePlayers.name, playerName)
-        )
-      });
-      
-      if (existingPlayer) {
-        return { success: true, playerId: existingPlayer.id };
+
+      if (!session) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Сессия не найдена' });
       }
-      
-      const playerId = nanoid();
-      const userId = 'user_' + nanoid();
-      
+
+      if (session.status !== 'waiting') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Игра уже началась' });
+      }
+
+      const players = await db.query.gamePlayers.findMany({
+        where: eq(gamePlayers.sessionId, input.sessionId),
+      });
+
+      if (players.length >= session.maxPlayers) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Лобби заполнено' });
+      }
+
+      const now = new Date().toISOString();
+      const playerId = uuidv4();
+
       await db.insert(gamePlayers).values({
         id: playerId,
         sessionId: input.sessionId,
-        userId: userId,
-        name: playerName,
+        userId: playerId,
+        name: 'Player',
         correctAnswers: 0,
         errors: 0,
         isBot: false,
@@ -126,63 +122,80 @@ export const gameRouter = router({
         isHost: false,
         joinedAt: now,
       });
-      
-      return { success: true, playerId };
+
+      return { playerId };
     }),
-  
-  // Получить данные сессии
+
   getSession: publicProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(async ({ input }) => {
       const session = await db.query.gameSessions.findFirst({
         where: eq(gameSessions.id, input.sessionId),
-        with: {
-          players: true
-        }
       });
-      return session;
-    }),
-  
-  // Получить список сессий
-  listSessions: publicProcedure
-    .query(async ({ ctx }) => {
-      console.log('🔵 [gameSimple.listSessions] Query started');
-      try {
-        const sessions = await db.query.gameSessions.findMany({
-          where: eq(gameSessions.status, 'waiting'),
-          with: {
-            players: true
-          },
-          orderBy: desc(gameSessions.createdAt)
-        });
-        console.log('📊 [gameSimple.listSessions] Found sessions:', sessions?.length || 0);
-        return sessions;
-      } catch (error) {
-        console.error('❌ [gameSimple.listSessions] Error:', error);
-        throw error;
+
+      if (!session) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Сессия не найдена' });
       }
+
+      const players = await db.query.gamePlayers.findMany({
+        where: eq(gamePlayers.sessionId, input.sessionId),
+      });
+
+      return {
+        id: session.id,
+        name: session.name,
+        nValue: session.nValue,
+        status: session.status,
+        players: players.map(p => ({
+          id: p.id,
+          name: p.name,
+          isHost: p.isHost,
+        })),
+      };
     }),
-  
-  // Начать игру
+
+  listSessions: publicProcedure
+    .query(async () => {
+      const sessions = await db.query.gameSessions.findMany({
+        where: eq(gameSessions.status, 'waiting'),
+        limit: 20,
+      });
+
+      const sessionsWithPlayers = await Promise.all(
+        sessions.map(async (session) => {
+          const players = await db.query.gamePlayers.findMany({
+            where: eq(gamePlayers.sessionId, session.id),
+          });
+          return {
+            id: session.id,
+            name: session.name,
+            players: players.map(p => ({ id: p.id, name: p.name })),
+          };
+        })
+      );
+
+      return sessionsWithPlayers;
+    }),
+
   startGame: publicProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(async ({ input }) => {
       const session = await db.query.gameSessions.findFirst({
-        where: eq(gameSessions.id, input.sessionId)
+        where: eq(gameSessions.id, input.sessionId),
       });
-      
-      if (!session) throw new Error('Session not found');
-      if (session.status !== 'waiting') {
-        return { success: true, alreadyPlaying: true };
+
+      if (!session) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Сессия не найдена' });
       }
-      
-      // Генерируем последовательность
+
+      if (session.status !== 'waiting') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Игра уже началась' });
+      }
+
       const totalSteps = 30;
       const positions = generateNBackSequence(totalSteps, session.nValue);
-      
       const now = new Date().toISOString();
-      
-      // Сохраняем последовательность
+
       await db.insert(sequences).values({
         id: uuidv4(),
         sessionId: input.sessionId,
@@ -190,15 +203,15 @@ export const gameRouter = router({
         totalSteps,
         createdAt: now,
       });
-      
-      // Обновляем статус сессии
-      await db.update(gameSessions)
-        .set({ 
-          status: 'playing', 
-          updatedAt: new Date().toISOString() 
+
+      await db
+        .update(gameSessions)
+        .set({
+          status: 'playing',
+          updatedAt: now,
         })
         .where(eq(gameSessions.id, input.sessionId));
-      
-      return { success: true, alreadyPlaying: false };
-    })
+
+      return { success: true };
+    }),
 });

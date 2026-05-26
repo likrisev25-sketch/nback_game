@@ -1,3 +1,4 @@
+// Файл: index.ts
 import { db } from '@/db/db';
 import * as schema from '@/db/schema';
 import { eq } from 'drizzle-orm';

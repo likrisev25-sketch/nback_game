@@ -1,3 +1,4 @@
+// Файл: BotPlayer.ts
 /**
  * Класс BotPlayer - модель бота для N-back игры
  * 

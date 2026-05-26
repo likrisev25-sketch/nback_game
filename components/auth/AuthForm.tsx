@@ -1,3 +1,4 @@
+// Файл: AuthForm.tsx
 'use client';
 
 import React, { useState } from 'react';

@@ -1,3 +1,4 @@
+// Файл: auth-client.tsx
 // Простой клиент аутентификации (без Better Auth)
 'use client';
 

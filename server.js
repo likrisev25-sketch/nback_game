@@ -1,3 +1,4 @@
+// Файл: server.js
 /**
  * Server file to start Next.js with Socket.IO
  * Run with: node server.js

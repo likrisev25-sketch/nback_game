@@ -1,5 +1,7 @@
+// Файл: index.ts
 import { pgTable, text, integer, boolean, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+export * from './schema';
 
 // Таблица пользователей
 export const users = pgTable('users', {
