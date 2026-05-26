@@ -1,40 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db/db';
+import { getDb } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 
+// Кэшируем сессии на короткое время для уменьшения нагрузки на БД
+const sessionCache = new Map<string, { data: any; expires: number }>();
+const CACHE_TTL = 30000; // 30 секунд
+
 export async function GET(request: NextRequest) {
-  console.log('🔵 [session] GET request received');
-  
   try {
     const cookieHeader = request.headers.get('cookie') || '';
-    console.log('🔵 [session] Cookie header:', cookieHeader ? 'present' : 'empty');
     
     const sessionCookie = cookieHeader.split(';').find(c => c.trim().startsWith('session='));
-    console.log('🔵 [session] Session cookie found:', !!sessionCookie);
     
     if (!sessionCookie) {
-      console.log('⚠️ [session] No session cookie, returning null');
       return NextResponse.json({ user: null, session: null });
     }
     
     const token = sessionCookie.split('=')[1];
-    console.log('🔵 [session] Token:', token?.substring(0, 10) + '...');
+    if (!token) {
+      return NextResponse.json({ user: null, session: null });
+    }
+
+    // Проверяем кэш
+    const cached = sessionCache.get(token);
+    if (cached && cached.expires > Date.now()) {
+      return NextResponse.json(cached.data);
+    }
     
-    if (!db) {
-      console.error('❌ [session] Database not available');
+    // Получаем подключение к БД
+    let db;
+    try {
+      db = getDb();
+    } catch (error) {
+      console.error('[session] Database connection failed:', error);
       return NextResponse.json({ user: null, session: null });
     }
     
-    // Поиск сессии по токену (без with, чтобы избежать ошибки referencedTable)
+    // Поиск сессии по токену
     const sessionData = await db.query.sessions.findFirst({
       where: (sessions, { eq }) => eq(sessions.token, token),
     });
     
-    console.log('🔵 [session] Session from DB:', sessionData ? 'found' : 'not found');
-    
     if (!sessionData || new Date(sessionData.expiresAt) < new Date()) {
-      console.log('⚠️ [session] Session expired or not found');
+      sessionCache.delete(token);
       return NextResponse.json({ user: null, session: null });
     }
     
@@ -43,17 +52,12 @@ export async function GET(request: NextRequest) {
       where: (users, { eq }) => eq(users.id, sessionData.userId),
     });
     
-    console.log('🔵 [session] User from DB:', user ? 'found' : 'not found');
-    
     if (!user) {
-      console.log('⚠️ [session] User not found for session');
+      sessionCache.delete(token);
       return NextResponse.json({ user: null, session: null });
     }
     
-    console.log('✅ [session] Valid session for user:', user.name);
-    
-    // Возвращаем только нужные поля
-    return NextResponse.json({
+    const responseData = {
       user: {
         id: user.id,
         name: user.name,
@@ -64,10 +68,17 @@ export async function GET(request: NextRequest) {
         token: sessionData.token,
         expiresAt: sessionData.expiresAt,
       },
+    };
+
+    // Кэшируем успешный ответ
+    sessionCache.set(token, {
+      data: responseData,
+      expires: Date.now() + CACHE_TTL,
     });
+    
+    return NextResponse.json(responseData);
   } catch (error: unknown) {
-    console.error('❌ [session] Error:', error);
-    console.error('❌ [session] Stack:', (error as Error).stack);
+    console.error('[session] Error:', error);
     return NextResponse.json({ user: null, session: null });
   }
 }

@@ -1,9 +1,31 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/socket", "destination": "/api/socket" }
-  ],
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "regions": ["fra1"],
   "env": {
     "NEXT_PUBLIC_APP_URL": "https://nback-game-wheat.vercel.app"
-  }
+  },
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    },
+    "app/api/trpc/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=10, stale-while-revalidate=59"
+        }
+      ]
+    }
+  ]
 }
