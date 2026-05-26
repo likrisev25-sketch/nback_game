@@ -90,6 +90,7 @@ export const LobbyList: React.FC = () => {
       const response = await fetch('/api/lobby/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           gameId: 'default',
           name: formData.name || undefined,
@@ -134,6 +135,7 @@ export const LobbyList: React.FC = () => {
       const response = await fetch(`/api/lobby/${lobbyId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
 
       const data = await response.json();
