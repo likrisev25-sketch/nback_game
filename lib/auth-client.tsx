@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, createContext, useContext, ReactNode, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 
 function getApiUrl() {
   if (typeof window !== 'undefined') {
@@ -94,7 +95,7 @@ const SessionContext = createContext<SessionContextType | null>(null);
 // Глобальное состояние сессии (для серверного рендеринга)
 // На клиенте это будет переопределено первым рендером
 let globalSessionData: { user: { id: string; name: string; email: string }; session: { id: string; token: string; expiresAt: string } } | null = null;
-let globalSessionLoading = false; // Меняем на false, чтобы избежать лишнего loading состояния
+let globalSessionLoading = false;
 let globalSessionError: Error | null = null;
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -115,9 +116,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         globalSessionLoading = false;
         setData(sessionData);
         setError(null);
+        console.log('[SessionProvider] Session loaded:', sessionData?.user?.email);
       }
     } catch (err) {
-      console.error('[useSession] Error fetching session:', err);
+      console.error('[SessionProvider] Error fetching session:', err);
       if (isMountedRef.current) {
         globalSessionData = null;
         globalSessionLoading = false;
@@ -154,9 +156,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         globalSessionData = sessionData;
         setData(sessionData);
         setError(null);
+        console.log('[SessionProvider] Session refetched:', sessionData?.user?.email);
       }
     } catch (err) {
-      console.error('[useSession] Error refetching session:', err);
+      console.error('[SessionProvider] Error refetching session:', err);
       if (isMountedRef.current) {
         setError(err instanceof Error ? err : new Error('Failed to fetch session'));
       }
@@ -184,4 +187,46 @@ export function useSession() {
   return context;
 }
 
-export const { signIn, signUp, signOut, getSession } = authClient;
+// Хук для использования в страницах с редиректом после входа
+export function useAuth() {
+  const { data: session, isLoading, mutate } = useSession();
+  const router = useRouter();
+
+  const signIn = async (email: string, password: string) => {
+    const result = await authClient.signIn(email, password);
+    if (result.data) {
+      // Обновляем сессию
+      await mutate();
+      // Перезагружаем страницу чтобы обновить состояние
+      router.refresh();
+    }
+    return result;
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    const result = await authClient.signUp(email, password, name);
+    if (result.data) {
+      // Обновляем сессию
+      await mutate();
+      // Перезагружаем страницу
+      router.refresh();
+    }
+    return result;
+  };
+
+  const signOut = async () => {
+    await authClient.signOut();
+    // Обновляем сессию
+    await mutate();
+    router.refresh();
+  };
+
+  return {
+    session,
+    isLoading,
+    signIn,
+    signUp,
+    signOut,
+    user: session?.user,
+  };
+}

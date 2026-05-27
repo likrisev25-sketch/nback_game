@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useSession } from '@/lib/auth-client';
+import { useAuth } from '@/lib/auth-client';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { mutate: refreshSession } = useSession();
+  const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,25 +32,14 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка регистрации');
+      const result = await signUp(email, password, name);
+      
+      if (result.error) {
+        throw result.error;
       }
-
-      // Обновляем сессию на клиенте
-      await refreshSession();
       
       // Редиректим на главную
       router.push('/');
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     } finally {
