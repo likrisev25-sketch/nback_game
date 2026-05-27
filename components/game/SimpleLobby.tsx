@@ -156,13 +156,15 @@ export function SimpleLobby() {
                     alert('Пожалуйста, введите ваше имя');
                     return;
                   }
-                  createSession.mutate({
+                  const payload = {
                     name: gameName,
                     playerName: userName,
                     nValue: 2,
                     totalSteps: 30,
                     baseSpeedMs: 1500
-                  });
+                  };
+                  console.log('🔵 [SimpleLobby] Отправка payload:', payload);
+                  createSession.mutate(payload);
                 }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                 disabled={createSession.isPending || !userName.trim()}

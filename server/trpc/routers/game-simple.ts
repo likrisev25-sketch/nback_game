@@ -46,53 +46,58 @@ export const gameSimpleRouter = router({
       baseSpeedMs: z.number().int().min(500).max(5000).default(1500),
     }))
     .mutation(async ({ input }) => {
-      console.log('🔵 [gameSimple.createSession] Received input:', input);
+      console.log('🔵 [gameSimple.createSession] Received input:', JSON.stringify(input));
       
-      const sessionId = uuidv4();
-      const now = new Date().toISOString();
-      const playerId = uuidv4();
+      try {
+        const sessionId = uuidv4();
+        const now = new Date().toISOString();
+        const playerId = uuidv4();
 
-      console.log('🔵 [gameSimple.createSession] Creating session:', sessionId);
+        console.log('🔵 [gameSimple.createSession] Creating session:', sessionId);
 
-      await db.insert(gameSessions).values({
-        id: sessionId,
-        name: input.name,
-        nValue: input.nValue,
-        baseSpeedMs: input.baseSpeedMs,
-        currentSpeedMs: input.baseSpeedMs,
-        maxPlayers: 2,
-        status: 'waiting',
-        createdAt: now,
-        updatedAt: now,
-      });
+        await db.insert(gameSessions).values({
+          id: sessionId,
+          name: input.name,
+          nValue: input.nValue,
+          baseSpeedMs: input.baseSpeedMs,
+          currentSpeedMs: input.baseSpeedMs,
+          maxPlayers: 2,
+          status: 'waiting',
+          createdAt: now,
+          updatedAt: now,
+        });
 
-      console.log('🔵 [gameSimple.createSession] Session created');
+        console.log('🔵 [gameSimple.createSession] Session created');
 
-      const playerName = input.playerName || 'Player';
-      await db.insert(gamePlayers).values({
-        id: playerId,
-        sessionId: sessionId,
-        userId: playerId,
-        name: playerName,
-        correctAnswers: 0,
-        errors: 0,
-        isBot: false,
-        botAccuracy: 100,
-        isHost: true,
-        joinedAt: now,
-      });
+        const playerName = input.playerName || 'Player';
+        await db.insert(gamePlayers).values({
+          id: playerId,
+          sessionId: sessionId,
+          userId: playerId,
+          name: playerName,
+          correctAnswers: 0,
+          errors: 0,
+          isBot: false,
+          botAccuracy: 100,
+          isHost: true,
+          joinedAt: now,
+        });
 
-      console.log('🔵 [gameSimple.createSession] Player created:', playerName);
+        console.log('🔵 [gameSimple.createSession] Player created:', playerName);
 
-      const result = {
-        sessionId,
-        playerId,
-        name: input.name,
-        nValue: input.nValue,
-      };
-      
-      console.log('✅ [gameSimple.createSession] Returning:', result);
-      return result;
+        const result = {
+          sessionId,
+          playerId,
+          name: input.name,
+          nValue: input.nValue,
+        };
+        
+        console.log('✅ [gameSimple.createSession] Returning:', JSON.stringify(result));
+        return result;
+      } catch (error) {
+        console.error('❌ [gameSimple.createSession] Error:', error);
+        throw error;
+      }
     }),
 
   joinSession: publicProcedure

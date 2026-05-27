@@ -15,6 +15,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       status: 'active',
       clients: global.__socketServer__?.sockets.sockets.size || 0,
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      }
     });
   }
 
@@ -31,7 +37,7 @@ export async function GET(request: NextRequest) {
       global.__socketServer__ = io;
     }
 
-    // Запускаем сервер на порту 3001 (отдельный от Next.js)
+    // Запускаем сервер на порту 3001 (отдельно от Next.js)
     global.__httpServer__.listen(3001, () => {
       console.log('✅ [Socket] WebSocket server running on port 3001');
     });
@@ -39,7 +45,23 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     status: 'initializing',
+  }, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
   });
 }
 
 export const dynamic = 'force-dynamic';
+
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
+  });
+}
