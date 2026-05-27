@@ -89,7 +89,6 @@ export const gameSimpleRouter = router({
         playerId,
         name: input.name,
         nValue: input.nValue,
-        playerName,
       };
       
       console.log('✅ [gameSimple.createSession] Returning:', result);
@@ -130,13 +129,12 @@ export const gameSimpleRouter = router({
 
       const now = new Date().toISOString();
       const playerId = uuidv4();
-      const playerName = input.playerName || 'Player';
 
       await db.insert(gamePlayers).values({
         id: playerId,
         sessionId: input.sessionId,
         userId: playerId,
-        name: playerName,
+        name: input.playerName || 'Player',
         correctAnswers: 0,
         errors: 0,
         isBot: false,
@@ -145,8 +143,8 @@ export const gameSimpleRouter = router({
         joinedAt: now,
       });
 
-      console.log('✅ [gameSimple.joinSession] Player joined:', { playerId, playerName });
-      return { playerId, playerName };
+      console.log('✅ [gameSimple.joinSession] Player joined:', { playerId });
+      return { playerId };
     }),
 
   getSession: publicProcedure

@@ -13,7 +13,6 @@ export function SimpleLobby() {
   const [showCreate, setShowCreate] = useState(true);
   const [showGame, setShowGame] = useState(false);
   const [playerId, setPlayerId] = useState('');
-  const [playerName, setPlayerName] = useState('');
   const [nValue, setNValue] = useState(2);
   
   console.log('🔵 [SimpleLobby] Component rendered, userName:', userName);
@@ -23,7 +22,6 @@ export function SimpleLobby() {
       console.log('✅ [SimpleLobby] Сессия создана:', data);
       setSessionId(data.sessionId);
       setPlayerId(data.playerId);
-      setPlayerName(data.playerName || userName);
       setShowCreate(false);
     },
     onError: (error) => {
@@ -38,7 +36,6 @@ export function SimpleLobby() {
       setShowCreate(false);
       if (data.playerId) {
         setPlayerId(data.playerId);
-        setPlayerName(data.playerName || userName);
       }
     },
     onError: (error) => {
@@ -59,24 +56,22 @@ export function SimpleLobby() {
     if (sessionData.data) {
       console.log('🔵 [SimpleLobby] Session data updated:', sessionData.data);
       const currentPlayer = sessionData.data.players?.find(
-        (p: any) => p.id === playerId || (p.name === userName && playerName)
+        (p: any) => p.id === playerId
       );
       if (currentPlayer) {
         console.log('🔵 [SimpleLobby] Found current player:', currentPlayer);
         setPlayerId(currentPlayer.id);
-        setPlayerName(currentPlayer.name);
         setNValue(sessionData.data.nValue || 2);
       }
       
       if (sessionData.data.status === 'playing' && currentPlayer && !showGame) {
         console.log('✅ [SimpleLobby] Переход к игре');
         setPlayerId(currentPlayer.id);
-        setPlayerName(currentPlayer.name);
         setNValue(sessionData.data.nValue || 2);
         setTimeout(() => setShowGame(true), 500);
       }
     }
-  }, [sessionData.data, userName, showGame, playerId, playerName]);
+  }, [sessionData.data, showGame, playerId]);
   
   const listSessions = trpc.gameSimple.listSessions.useQuery(undefined, {
     refetchInterval: 3000
