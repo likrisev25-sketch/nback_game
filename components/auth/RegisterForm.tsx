@@ -4,7 +4,7 @@
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { authClient } from '@/lib/auth-client';
+import { authClient, useSession } from '@/lib/auth-client';
 
 const registerSchema = z
   .object({
@@ -27,6 +27,7 @@ interface RegisterFormProps {
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin }) => {
   const router = useRouter();
+  const { mutate: refreshSession } = useSession();
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
@@ -74,9 +75,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           return;
         }
 
-        console.log('✅ [RegisterForm] Registration successful, redirecting...');
-        // Вместо router.refresh() делаем полный редирект на главную
-        // Это гарантирует обновление сессии и предотвращает цикл обновлений
+        console.log('✅ [RegisterForm] Registration successful, refreshing session...');
+        // Обновляем сессию на клиенте
+        await refreshSession();
+        
+        // Вызываем callback успеха, если есть
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // Делаем полный редирект на главную
         window.location.href = '/';
       } catch (err: unknown) {
         console.error('❌ [RegisterForm] Registration exception:', err);

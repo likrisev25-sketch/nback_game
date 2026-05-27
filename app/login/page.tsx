@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from '@/lib/auth-client';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { mutate: refreshSession } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,6 +32,9 @@ export default function LoginPage() {
         throw new Error(data.error || 'Ошибка входа');
       }
 
+      // Обновляем сессию на клиенте
+      await refreshSession();
+      
       // Редиректим на главную
       router.push('/');
       router.refresh();

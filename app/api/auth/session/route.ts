@@ -3,9 +3,9 @@ import { getDb } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 
-// Кэшируем сессии на короткое время для уменьшения нагрузки на БД
-const sessionCache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 30000; // 30 секунд
+// Убрали кэш сессий для немедленного обновления после входа/регистрации
+// const sessionCache = new Map<string, { data: any; expires: number }>();
+// const CACHE_TTL = 30000; // 30 секунд
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,10 +23,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Проверяем кэш
-    const cached = sessionCache.get(token);
-    if (cached && cached.expires > Date.now()) {
-      return NextResponse.json(cached.data);
-    }
+    // const cached = sessionCache.get(token);
+    // if (cached && cached.expires > Date.now()) {
+    //   return NextResponse.json(cached.data);
+    // }
     
     // Получаем подключение к БД
     let db;
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     });
     
     if (!sessionData || new Date(sessionData.expiresAt) < new Date()) {
-      sessionCache.delete(token);
+      // sessionCache.delete(token);
       return NextResponse.json({ user: null, session: null });
     }
     
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
     
     if (!user) {
-      sessionCache.delete(token);
+      // sessionCache.delete(token);
       return NextResponse.json({ user: null, session: null });
     }
     
@@ -71,10 +71,10 @@ export async function GET(request: NextRequest) {
     };
 
     // Кэшируем успешный ответ
-    sessionCache.set(token, {
-      data: responseData,
-      expires: Date.now() + CACHE_TTL,
-    });
+    // sessionCache.set(token, {
+    //   data: responseData,
+    //   expires: Date.now() + CACHE_TTL,
+    // });
     
     return NextResponse.json(responseData);
   } catch (error: unknown) {

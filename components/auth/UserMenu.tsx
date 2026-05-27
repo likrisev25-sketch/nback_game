@@ -8,10 +8,6 @@ import { useSession } from '@/lib/auth-client';
 import { LogoutButton } from './LogoutButton';
 import { AuthModal } from './AuthModal';
 
-// Модульный кэш для сессии
-let sessionCache: { user: { id: string; name: string; email: string } } | null = null;
-let cacheLoaded: boolean = false;
-
 export const UserMenu: React.FC = () => {
   const {
     data: session,
@@ -21,16 +17,6 @@ export const UserMenu: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const hasLoadedRef = useRef<boolean>(cacheLoaded);
-
-  // Кэшируем сессию на уровне компонента
-  useEffect(() => {
-    if (session?.user && !hasLoadedRef.current) {
-      sessionCache = { user: session.user };
-      cacheLoaded = true;
-      hasLoadedRef.current = true;
-    }
-  }, [session]);
 
   const openLogin = () => {
     setAuthModalMode('login');
@@ -42,18 +28,18 @@ export const UserMenu: React.FC = () => {
     setIsAuthModalOpen(true);
   };
 
-  // Используем кэшированную сессию или текущую
-  const cachedSession = sessionCache || session;
+  // Используем текущую сессию без кэширования
+  const currentSession = session;
 
   const displayName =
-    cachedSession?.user?.name ||
-    cachedSession?.user?.email?.split('@')[0] ||
+    currentSession?.user?.name ||
+    currentSession?.user?.email?.split('@')[0] ||
     'Пользователь';
 
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   // Загрузка сессии - показываем скелетон только при первой загрузке
-  if (isLoading && !cachedSession) {
+  if (isLoading && !currentSession) {
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
@@ -63,7 +49,7 @@ export const UserMenu: React.FC = () => {
   }
 
   // Не авторизован
-  if (!cachedSession?.user) {
+  if (!currentSession?.user) {
     return (
       <>
         <div className="flex items-center gap-2">
@@ -127,11 +113,11 @@ export const UserMenu: React.FC = () => {
             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {cachedSession.user.name || displayName}
+                  {currentSession.user.name || displayName}
                 </p>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {cachedSession.user.email}
+                  {currentSession.user.email}
                 </p>
               </div>
 

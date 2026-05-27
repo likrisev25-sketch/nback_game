@@ -4,7 +4,7 @@
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { authClient } from '@/lib/auth-client';
+import { authClient, useSession } from '@/lib/auth-client';
 
 const loginSchema = z.object({
   email: z.string().email('Введите корректный email'),
@@ -20,6 +20,7 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) => {
   const router = useRouter();
+  const { mutate: refreshSession } = useSession();
   const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -62,8 +63,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           return;
         }
 
-        console.log('✅ [LoginForm] Login successful, redirecting...');
-        // Вместо router.refresh() делаем полный редирект на главную
+        console.log('✅ [LoginForm] Login successful, refreshing session...');
+        // Обновляем сессию на клиенте
+        await refreshSession();
+        
+        // Вызываем callback успеха, если есть
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // Делаем полный редирект на главную
         window.location.href = '/';
       } catch (err: unknown) {
         console.error('❌ [LoginForm] Login exception:', err);
