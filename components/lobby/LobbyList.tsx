@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useLobby } from '@/contexts/LobbyContext';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
+import { trpc } from '@/lib/trpc-client';
 
 interface Lobby {
   id: string;
@@ -24,12 +25,42 @@ export const LobbyList: React.FC = () => {
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lobbyIdToJoin, setLobbyIdToJoin] = useState<string>('');
   
   const { data: session } = useSession();
   const { joinLobby, toggleAutoStart } = useLobby();
   const router = useRouter();
+
+  // tRPC мутации и запросы
+  const listLobbies = trpc.lobby.listLobbies.useQuery(undefined, {
+    refetchInterval: 10000, // Обновляем каждые 10 секунд
+  });
+
+  const createLobbyMutation = trpc.lobby.createLobby.useMutation({
+    onSuccess: (data) => {
+      console.log('✅ [LobbyList] Lobby created via tRPC:', data);
+      setShowCreateModal(false);
+      router.push(`/lobby/${data.lobbyId}`);
+    },
+    onError: (error) => {
+      console.error('❌ [LobbyList] Error creating lobby:', error);
+      setError(error.message || 'Не удалось создать лобби');
+    },
+  });
+
+  const joinLobbyMutation = trpc.lobby.joinLobby.useMutation({
+    onSuccess: (data) => {
+      console.log('✅ [LobbyList] Joined lobby via tRPC:', data);
+      if (data.success) {
+        router.push(`/lobby/${lobbyIdToJoin}`);
+      }
+    },
+    onError: (error) => {
+      console.error('❌ [LobbyList] Error joining lobby:', error);
+      setError(error.message || 'Не удалось присоединиться к лобби');
+    },
+  });
 
   // Формы создания лобби
   const [formData, setFormData] = useState({
@@ -44,30 +75,13 @@ export const LobbyList: React.FC = () => {
     botName: 'Бот',
   });
 
-  // Загрузка списка лобби
+  // Загрузка списка лобби через tRPC (уже настроено через useQuery)
   useEffect(() => {
-    fetchLobbies();
-    
-    // Обновляем список каждые 10 секунд
-    const interval = setInterval(fetchLobbies, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchLobbies = async () => {
-    try {
-      const response = await fetch('/api/lobby/list');
-      const data = await response.json();
-      
-      if (data.success) {
-        setLobbies(data.lobbies);
-      }
-    } catch (error) {
-      console.error('Error fetching lobbies:', error);
-      setError('Не удалось загрузить список лобби');
-    } finally {
+    if (listLobbies.data) {
+      setLobbies(listLobbies.data);
       setIsLoading(false);
     }
-  };
+  }, [listLobbies.data]);
 
   const handleCreateLobby = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,78 +89,41 @@ export const LobbyList: React.FC = () => {
     console.log('🔵 [LobbyList] handleCreateLobby вызван');
     console.log('🔵 [LobbyList] session:', session);
     
+    // tRPC роутер поддерживает создание лобби без авторизации (гости)
+    // Но мы всё равно проверяем сессию для совместимости
     if (!session?.user) {
-      console.error('❌ [LobbyList] Нет сессии или пользователя');
-      setError('Необходимо авторизоваться');
-      return;
+      console.log('🔵 [LobbyList] Создание лобби без авторизации (гость)');
     }
 
-    setCreating(true);
     setError(null);
     
     try {
-      console.log('🔵 [LobbyList] Создание лобби для пользователя:', session.user.id, session.user.name);
+      console.log('🔵 [LobbyList] Создание лобби через tRPC...');
       
-      const response = await fetch('/api/lobby/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          gameId: 'default',
-          name: formData.name || undefined,
-          minPlayers: formData.minPlayers,
-          maxPlayers: formData.maxPlayers,
-          nValue: formData.nValue,
-          baseSpeedMs: formData.baseSpeedMs,
-          password: formData.password || undefined,
-          userName: session.user.name || 'Игрок',
-          addBot: formData.addBot,
-          botAccuracy: formData.botAccuracy,
-          botName: formData.botName,
-        }),
+      // Используем tRPC мутацию вместо прямого API вызова
+      createLobbyMutation.mutate({
+        gameId: 'default',
+        name: formData.name || 'Моё лобби',
+        nValue: formData.nValue,
+        baseSpeedMs: formData.baseSpeedMs,
+        maxPlayers: formData.maxPlayers,
+        password: formData.password || undefined,
       });
-
-      console.log('🔵 [LobbyList] Response status:', response.status);
-      const data = await response.json();
-      console.log('📥 [LobbyList] Ответ от сервера:', data);
-      
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Не удалось создать лобби');
-      }
-      
-      // Сразу переходим в созданное лобби
-      setShowCreateModal(false);
-      router.push(`/lobby/${data.lobby.id}`);
     } catch (err) {
       console.error('❌ [LobbyList] Исключение при создании лобби:', err);
       setError(err instanceof Error ? err.message : 'Произошла ошибка при создании лобби');
-    } finally {
-      setCreating(false);
     }
   };
 
   const handleJoinLobby = async (lobbyId: string) => {
-    if (!session?.user) {
-      setError('Необходимо авторизоваться');
-      return;
-    }
-
+    // tRPC роутер поддерживает присоединение без авторизации (гости)
+    setLobbyIdToJoin(lobbyId);
+    
     try {
-      const response = await fetch(`/api/lobby/${lobbyId}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      // Используем tRPC мутацию вместо прямого API вызова
+      joinLobbyMutation.mutate({
+        lobbyId: lobbyId,
       });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // Присоединяемся к лобби
-        await joinLobby(lobbyId, session.user.id, session.user.name);
-        router.push(`/lobby/${lobbyId}`);
-      } else {
-        setError(data.error || 'Не удалось присоединиться к лобби');
-      }
     } catch (error) {
       console.error('Error joining lobby:', error);
       setError('Произошла ошибка при присоединении');
@@ -192,12 +169,12 @@ export const LobbyList: React.FC = () => {
         </div>
       )}
 
-      {isLoading ? (
+      {isLoading || listLobbies.isLoading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Загрузка лобби...</p>
         </div>
-      ) : lobbies.length === 0 ? (
+      ) : !lobbies || lobbies.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-gray-600 dark:text-gray-400 text-lg">
             Пока нет активных лобби. Создайте первое!
@@ -401,10 +378,10 @@ export const LobbyList: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={creating}
+                disabled={createLobbyMutation.isPending}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition-colors"
               >
-                {creating ? 'Создание...' : 'Создать'}
+                {createLobbyMutation.isPending ? 'Создание...' : 'Создать'}
               </button>
             </form>
           </div>
