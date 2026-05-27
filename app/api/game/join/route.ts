@@ -15,7 +15,7 @@ function isValidUUID(id: string): boolean {
 }
 
 // Валидация параметров присоединения
-function validateJoinParams(body: JoinRequest): { valid: boolean; error?: string } {
+function validateJoinParams(body: JoinGameRequest & { playerName: string }): { valid: boolean; error?: string } {
   if (!body.sessionId || typeof body.sessionId !== 'string' || !isValidUUID(body.sessionId)) {
     return { valid: false, error: 'Некорректный ID сессии' };
   }
