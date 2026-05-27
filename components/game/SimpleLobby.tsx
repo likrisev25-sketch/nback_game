@@ -13,30 +13,38 @@ export function SimpleLobby() {
   const [showCreate, setShowCreate] = useState(true);
   const [showGame, setShowGame] = useState(false);
   const [playerId, setPlayerId] = useState('');
+  const [playerName, setPlayerName] = useState('');
   const [nValue, setNValue] = useState(2);
+  
+  console.log('🔵 [SimpleLobby] Component rendered, userName:', userName);
   
   const createSession = trpc.gameSimple.createSession.useMutation({
     onSuccess: (data) => {
-      console.log('✅ Сессия создана:', data);
+      console.log('✅ [SimpleLobby] Сессия создана:', data);
       setSessionId(data.sessionId);
-      setPlayerId(data.playerId || '');
+      setPlayerId(data.playerId);
+      setPlayerName(data.playerName || userName);
       setShowCreate(false);
     },
     onError: (error) => {
-      console.error('❌ Ошибка создания сессии:', error);
+      console.error('❌ [SimpleLobby] Ошибка создания сессии:', error);
       alert(`Ошибка: ${error.message}`);
     }
   });
   
   const joinSession = trpc.gameSimple.joinSession.useMutation({
     onSuccess: (data) => {
-      console.log('✅ Присоединился к сессии:', data);
+      console.log('✅ [SimpleLobby] Присоединился к сессии:', data);
       setShowCreate(false);
       if (data.playerId) {
         setPlayerId(data.playerId);
+        setPlayerName(data.playerName || userName);
       }
     },
-    onError: (error) => alert(`Ошибка: ${error.message}`)
+    onError: (error) => {
+      console.error('❌ [SimpleLobby] Ошибка присоединения:', error);
+      alert(`Ошибка: ${error.message}`);
+    }
   });
   
   const sessionData = trpc.gameSimple.getSession.useQuery(
@@ -47,23 +55,28 @@ export function SimpleLobby() {
     }
   );
   
-  // Сохраняем playerId текущего игрока при обновлении данных сессии
   useEffect(() => {
     if (sessionData.data) {
-      const currentPlayer = sessionData.data.players?.find(p => p.name === userName);
+      console.log('🔵 [SimpleLobby] Session data updated:', sessionData.data);
+      const currentPlayer = sessionData.data.players?.find(
+        (p: any) => p.id === playerId || (p.name === userName && playerName)
+      );
       if (currentPlayer) {
+        console.log('🔵 [SimpleLobby] Found current player:', currentPlayer);
         setPlayerId(currentPlayer.id);
+        setPlayerName(currentPlayer.name);
         setNValue(sessionData.data.nValue || 2);
       }
       
-      // Автоматически переходим к игре если статус playing и есть playerId
       if (sessionData.data.status === 'playing' && currentPlayer && !showGame) {
+        console.log('✅ [SimpleLobby] Переход к игре');
         setPlayerId(currentPlayer.id);
+        setPlayerName(currentPlayer.name);
         setNValue(sessionData.data.nValue || 2);
         setTimeout(() => setShowGame(true), 500);
       }
     }
-  }, [sessionData.data, userName, showGame]);
+  }, [sessionData.data, userName, showGame, playerId, playerName]);
   
   const listSessions = trpc.gameSimple.listSessions.useQuery(undefined, {
     refetchInterval: 3000
@@ -71,24 +84,19 @@ export function SimpleLobby() {
   
   const startGame = trpc.gameSimple.startGame.useMutation({
     onSuccess: (data) => {
-      console.log('✅ Игра началась:', data);
-      // Перезагрузить данные сессии и получить playerId
+      console.log('✅ [SimpleLobby] Игра началась:', data);
       sessionData.refetch();
-      // Находим playerId текущего игрока
-      const currentPlayer = sessionData.data?.players?.find(p => p.name === userName);
-      if (currentPlayer) {
-        setPlayerId(currentPlayer.id);
-        setNValue(sessionData.data?.nValue || 2);
-        setShowGame(true);
-      }
     },
     onError: (error) => {
-      console.error('❌ Ошибка запуска игры:', error);
+      console.error('❌ [SimpleLobby] Ошибка запуска игры:', error);
       alert(`Ошибка: ${error.message}`);
     }
   });
   
-  const isHost = sessionData.data?.players?.some(p => p.name === userName);
+  const isHost = sessionData.data?.players?.some(
+    (p: any) => p.id === playerId && p.isHost
+  );
+  console.log('🔵 [SimpleLobby] isHost check:', { playerId, isHost, players: sessionData.data?.players });
   
   // Обработчик завершения игры
   const handleGameComplete = (correctAnswers: number, errors: number) => {
@@ -140,17 +148,24 @@ export function SimpleLobby() {
               />
               <button
                 onClick={() => {
-                  console.log('🔵 Кнопка "Создать лобби" нажата');
-                  console.log('🔵 gameName:', gameName);
+                  console.log('🔵 [SimpleLobby] Кнопка "Создать лобби" нажата');
+                  console.log('🔵 [SimpleLobby] gameName:', gameName);
+                  console.log('🔵 [SimpleLobby] userName:', userName);
+                  if (!userName.trim()) {
+                    console.error('❌ [SimpleLobby] Имя игрока пустое!');
+                    alert('Пожалуйста, введите ваше имя');
+                    return;
+                  }
                   createSession.mutate({
                     name: gameName,
+                    playerName: userName,
                     nValue: 2,
                     totalSteps: 30,
                     baseSpeedMs: 1500
                   });
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-400"
-                disabled={createSession.isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={createSession.isPending || !userName.trim()}
               >
                 {createSession.isPending ? 'Создание...' : '🎮 Создать лобби'}
               </button>
@@ -182,10 +197,21 @@ export function SimpleLobby() {
                       </div>
                       <button
                         onClick={() => {
+                          console.log('🔵 [SimpleLobby] Присоединение к сессии:', session.id);
+                          console.log('🔵 [SimpleLobby] userName:', userName);
+                          if (!userName.trim()) {
+                            console.error('❌ [SimpleLobby] Имя игрока пустое!');
+                            alert('Пожалуйста, введите ваше имя');
+                            return;
+                          }
                           setSessionId(session.id);
-                          joinSession.mutate({ sessionId: session.id });
+                          joinSession.mutate({ 
+                            sessionId: session.id,
+                            playerName: userName
+                          });
                         }}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled={!userName.trim()}
                       >
                         Присоединиться
                       </button>

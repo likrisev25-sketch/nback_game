@@ -40,6 +40,7 @@ export const gameSimpleRouter = router({
   createSession: publicProcedure
     .input(z.object({
       name: z.string().min(1).max(100),
+      playerName: z.string().min(1).max(50).optional(),
       nValue: z.number().int().min(1).max(5).default(2),
       totalSteps: z.number().int().min(10).max(100).default(30),
       baseSpeedMs: z.number().int().min(500).max(5000).default(1500),
@@ -67,11 +68,12 @@ export const gameSimpleRouter = router({
 
       console.log('🔵 [gameSimple.createSession] Session created');
 
+      const playerName = input.playerName || 'Player';
       await db.insert(gamePlayers).values({
         id: playerId,
         sessionId: sessionId,
         userId: playerId,
-        name: 'Player',
+        name: playerName,
         correctAnswers: 0,
         errors: 0,
         isBot: false,
@@ -80,33 +82,39 @@ export const gameSimpleRouter = router({
         joinedAt: now,
       });
 
-      console.log('🔵 [gameSimple.createSession] Player created');
+      console.log('🔵 [gameSimple.createSession] Player created:', playerName);
 
       const result = {
         sessionId,
         playerId,
         name: input.name,
         nValue: input.nValue,
+        playerName,
       };
       
-      console.log('🔵 [gameSimple.createSession] Returning:', result);
+      console.log('✅ [gameSimple.createSession] Returning:', result);
       return result;
     }),
 
   joinSession: publicProcedure
     .input(z.object({
       sessionId: z.string(),
+      playerName: z.string().min(1).max(50).optional(),
     }))
     .mutation(async ({ input }) => {
+      console.log('🔵 [gameSimple.joinSession] Join request for sessionId:', input.sessionId);
+      
       const session = await db.query.gameSessions.findFirst({
         where: eq(gameSessions.id, input.sessionId),
       });
 
       if (!session) {
+        console.error('❌ [gameSimple.joinSession] Session not found:', input.sessionId);
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Сессия не найдена' });
       }
 
       if (session.status !== 'waiting') {
+        console.error('❌ [gameSimple.joinSession] Session status:', session.status);
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Игра уже началась' });
       }
 
@@ -114,18 +122,21 @@ export const gameSimpleRouter = router({
         where: eq(gamePlayers.sessionId, input.sessionId),
       });
 
+      console.log('🔵 [gameSimple.joinSession] Current players count:', players.length);
+
       if (players.length >= session.maxPlayers) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Лобби заполнено' });
       }
 
       const now = new Date().toISOString();
       const playerId = uuidv4();
+      const playerName = input.playerName || 'Player';
 
       await db.insert(gamePlayers).values({
         id: playerId,
         sessionId: input.sessionId,
         userId: playerId,
-        name: 'Player',
+        name: playerName,
         correctAnswers: 0,
         errors: 0,
         isBot: false,
@@ -134,7 +145,8 @@ export const gameSimpleRouter = router({
         joinedAt: now,
       });
 
-      return { playerId };
+      console.log('✅ [gameSimple.joinSession] Player joined:', { playerId, playerName });
+      return { playerId, playerName };
     }),
 
   getSession: publicProcedure
