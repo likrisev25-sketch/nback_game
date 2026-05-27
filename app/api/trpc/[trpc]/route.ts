@@ -7,20 +7,7 @@ const handler = (req: Request) =>
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: async (opts) => {
-      return createTRPCContext(opts);
-    },
-    onError:
-      process.env.NODE_ENV === 'development'
-        ? ({ path, error, input }) => {
-            console.error(
-              `❌ tRPC failed on ${path ?? '<no-path>'}`
-            );
-            console.error('Error:', error);
-            console.error('Input:', input);
-            console.error('Stack:', error.stack);
-          }
-        : undefined,
+    createContext: createTRPCContext,
   });
 
 export { handler as GET, handler as POST };

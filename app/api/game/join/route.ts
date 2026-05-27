@@ -3,50 +3,55 @@ import { db } from '@/db/db';
 import { gameSessions, gamePlayers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { getSessionFromRequest } from '@/lib/session';
 
 interface JoinGameRequest {
   sessionId: string;
-  playerName?: string;
-  userId?: string;
 }
 
-// Валидация числового ID игры (6 цифр)
-function isValidGameId(id: string): boolean {
-  return /^\d{6}$/.test(id);
+// Валидация UUID
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+// Валидация параметров присоединения
+function validateJoinParams(body: JoinRequest): { valid: boolean; error?: string } {
+  if (!body.sessionId || typeof body.sessionId !== 'string' || !isValidUUID(body.sessionId)) {
+    return { valid: false, error: 'Некорректный ID сессии' };
+  }
+  if (!body.playerName || typeof body.playerName !== 'string' || body.playerName.trim().length === 0) {
+    return { valid: false, error: 'Введите имя игрока' };
+  }
+  if (body.playerName.length > 50) {
+    return { valid: false, error: 'Имя игрока слишком длинное (максимум 50 символов)' };
+  }
+  return { valid: true };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: JoinGameRequest = await request.json();
+    const body: JoinGameRequest & { playerName: string } = await request.json();
     const { sessionId, playerName } = body;
 
-    // Проверяем авторизацию (опционально)
-    const session = await getSessionFromRequest(request);
-    const authenticatedUserId = session?.user?.id;
-
-    if (!sessionId || typeof sessionId !== 'string' || !isValidGameId(sessionId)) {
+    // Валидация параметров
+    const validation = validateJoinParams(body);
+    if (!validation.valid) {
+      console.log('❌ Validation failed:', validation.error);
       return NextResponse.json(
-        { error: 'Некорректный ID игры. Введите 6 цифр.' },
+        { error: validation.error },
         { status: 400 }
       );
     }
 
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not available' },
-        { status: 500 }
-      );
-    }
-
     console.log('🔵 [join] Попытка присоединиться к игре:', sessionId);
+    console.log('🔵 [join] Имя игрока:', playerName);
 
     // Проверяем сессию
-    const gameSession = await db.query.gameSessions.findFirst({
+    const session = await db.query.gameSessions.findFirst({
       where: eq(gameSessions.id, sessionId),
     });
 
-    if (!gameSession) {
+    if (!session) {
       console.error('❌ [join] Сессия не найдена:', sessionId);
       return NextResponse.json(
         { error: 'Сессия не найдена' },
@@ -54,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (gameSession.status !== 'waiting') {
-      console.error('❌ [join] Игра уже началась:', gameSession.status);
+    if (session.status !== 'waiting') {
+      console.error('❌ [join] Игра уже началась:', session.status);
       return NextResponse.json(
         { error: 'Игра уже началась' },
         { status: 400 }
@@ -68,8 +73,9 @@ export async function POST(request: NextRequest) {
     });
 
     const playerCount = currentPlayers.length;
+    console.log('🔵 [join] Текущее количество игроков:', playerCount, '/', session.maxPlayers);
 
-    if (playerCount >= gameSession.maxPlayers) {
+    if (playerCount >= session.maxPlayers) {
       console.error('❌ [join] Игра полна!');
       return NextResponse.json(
         { error: 'Игра полна' },
@@ -78,34 +84,32 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date().toISOString();
-    const playerId = uuidv4();
-    const displayName = playerName || session?.user?.name || session?.user?.email?.split('@')[0] || 'Игрок';
 
     // Добавляем игрока
+    console.log('🔵 [join] Inserting player into DB...');
     const [player] = await db
       .insert(gamePlayers)
       .values({
-        id: playerId,
+        id: uuidv4(),
         sessionId,
-        userId: authenticatedUserId || playerId, // Связываем с реальным пользователем или генерируем UUID
-        name: displayName,
+        userId: uuidv4(),
         correctAnswers: 0,
         errors: 0,
         isBot: false,
         botAccuracy: 100,
-        isHost: false,
         joinedAt: now,
       })
       .returning();
 
+    console.log('🔵 [join] Player created:', player);
     console.log('✅ [join] SUCCESS: Player joined');
 
     return NextResponse.json({
       success: true,
       playerId: player.id,
-      playerName: displayName,
+      playerName: playerName,
       playerCount: playerCount + 1,
-      maxPlayers: gameSession.maxPlayers,
+      maxPlayers: session.maxPlayers,
     });
   } catch (error) {
     console.error('❌ [join] Ошибка присоединения к игре:', error);
