@@ -4,13 +4,18 @@
 
 import { useState, useEffect, useCallback, useRef, createContext, useContext, ReactNode, useMemo } from 'react';
 
-const API_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-const CACHE_BUSTER = Date.now();
+function getApiUrl() {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return 'http://localhost:3000';
+}
 
-console.log('[auth-client] API_URL:', API_URL);
+const CACHE_BUSTER = Date.now();
 
 export const authClient = {
   signUp: async (email: string, password: string, name: string) => {
+    const API_URL = getApiUrl();
     try {
       const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
@@ -32,6 +37,7 @@ export const authClient = {
   },
   
   signIn: async (email: string, password: string) => {
+    const API_URL = getApiUrl();
     try {
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
@@ -53,6 +59,7 @@ export const authClient = {
   },
   
   signOut: async () => {
+    const API_URL = getApiUrl();
     const response = await fetch(`${API_URL}/api/logout`, {
       method: 'POST',
       credentials: 'include',
@@ -61,6 +68,7 @@ export const authClient = {
   },
   
   getSession: async () => {
+    const API_URL = getApiUrl();
     const response = await fetch(`${API_URL}/api/auth/session`, {
       method: 'GET',
       credentials: 'include',

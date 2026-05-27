@@ -9,11 +9,16 @@ import { NBackGame } from './NBackGame';
 export function SimpleLobby() {
   const [sessionId, setSessionId] = useState('');
   const [gameName, setGameName] = useState('Моя игра');
-  const [userName, setUserNameState] = useState(getUserName());
+  const [userName, setUserNameState] = useState('Игрок');
   const [showCreate, setShowCreate] = useState(true);
   const [showGame, setShowGame] = useState(false);
   const [playerId, setPlayerId] = useState('');
   const [nValue, setNValue] = useState(2);
+  
+  // Инициализация имени только на клиенте
+  useEffect(() => {
+    setUserNameState(getUserName());
+  }, []);
   
   console.log('🔵 [SimpleLobby] Component rendered, userName:', userName);
   
